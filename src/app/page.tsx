@@ -12,7 +12,19 @@ import AgentStatusPanel from "@/components/hud/AgentStatusPanel";
 import ModelSelector from "@/components/hud/ModelSelector";
 import CharacterSelectPanel from "@/components/hud/CharacterSelectPanel";
 import { ToastProvider, toastSuccess } from "@/components/ui/toast-provider";
-import { getSelectedCharacter, setSelectedCharacter, getCharacterById } from "@/lib/southpark-characters";
+import { getCharacterById } from "@/lib/southpark-characters";
+
+// Helper functions for character selection
+function getSelectedCharacter(): string {
+  if (typeof window === "undefined") return "stan";
+  return localStorage.getItem("agent-town:selected-character") || "stan";
+}
+
+function setSelectedCharacter(characterId: string): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem("agent-town:selected-character", characterId);
+  }
+}
 import { Gamepad2, Edit3, Keyboard, Settings, History, Users, Wifi, WifiOff, UserCircle } from "lucide-react";
 
 // Dynamically import PhaserGame to avoid SSR issues
@@ -53,6 +65,16 @@ function AppContent() {
     const saved = getSelectedCharacter();
     setCurrentCharacter(saved);
   }, []);
+  
+  // Handle character selection
+  const handleCharacterSelect = useCallback((characterId: string) => {
+    setSelectedCharacter(characterId);
+    setCurrentCharacter(characterId);
+    const character = getCharacterById(characterId);
+    if (character) {
+      toastSuccess(`Character selected: ${character.fullName}`, character.personality);
+    }
+  }, []);
 
   // Handle mode changes
   const handleEditMode = useCallback(() => setMode("edit"), []);
@@ -71,14 +93,7 @@ function AppContent() {
     }
   }, [state.connection, connect, disconnect]);
 
-  const handleCharacterSelect = useCallback((characterId: string) => {
-    setSelectedCharacter(characterId);
-    setCurrentCharacter(characterId);
-    const character = getCharacterById(characterId);
-    if (character) {
-      toastSuccess(`Character selected: ${character.fullName}`, `${character.personality}`);
-    }
-  }, []);
+
 
   // Keyboard shortcuts
   useEffect(() => {
