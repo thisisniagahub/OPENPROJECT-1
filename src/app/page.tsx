@@ -10,8 +10,10 @@ import SettingsPanel from "@/components/hud/SettingsPanel";
 import TaskHistory from "@/components/hud/TaskHistory";
 import AgentStatusPanel from "@/components/hud/AgentStatusPanel";
 import ModelSelector from "@/components/hud/ModelSelector";
-import { ToastProvider } from "@/components/ui/toast-provider";
-import { Gamepad2, Edit3, Keyboard, Settings, History, Users, Wifi, WifiOff } from "lucide-react";
+import CharacterSelectPanel from "@/components/hud/CharacterSelectPanel";
+import { ToastProvider, toastSuccess } from "@/components/ui/toast-provider";
+import { getSelectedCharacter, setSelectedCharacter, getCharacterById } from "@/lib/southpark-characters";
+import { Gamepad2, Edit3, Keyboard, Settings, History, Users, Wifi, WifiOff, UserCircle } from "lucide-react";
 
 // Dynamically import PhaserGame to avoid SSR issues
 const PhaserGame = dynamic(() => import("@/components/game/PhaserGame"), {
@@ -43,6 +45,14 @@ function AppContent() {
   const [showSettings, setShowSettings] = useState(false);
   const [showTaskHistory, setShowTaskHistory] = useState(false);
   const [showAgentPanel, setShowAgentPanel] = useState(false);
+  const [showCharacterSelect, setShowCharacterSelect] = useState(false);
+  const [currentCharacter, setCurrentCharacter] = useState<string>("");
+
+  // Load saved character on mount
+  useEffect(() => {
+    const saved = getSelectedCharacter();
+    setCurrentCharacter(saved);
+  }, []);
 
   // Handle mode changes
   const handleEditMode = useCallback(() => setMode("edit"), []);
@@ -51,6 +61,8 @@ function AppContent() {
   const handleToggleSettings = useCallback(() => setShowSettings((prev) => !prev), []);
   const handleToggleTaskHistory = useCallback(() => setShowTaskHistory((prev) => !prev), []);
   const handleToggleAgentPanel = useCallback(() => setShowAgentPanel((prev) => !prev), []);
+  const handleToggleCharacterSelect = useCallback(() => setShowCharacterSelect((prev) => !prev), []);
+  
   const handleConnect = useCallback(() => {
     if (state.connection === "connected") {
       disconnect();
@@ -58,6 +70,15 @@ function AppContent() {
       connect();
     }
   }, [state.connection, connect, disconnect]);
+
+  const handleCharacterSelect = useCallback((characterId: string) => {
+    setSelectedCharacter(characterId);
+    setCurrentCharacter(characterId);
+    const character = getCharacterById(characterId);
+    if (character) {
+      toastSuccess(`Character selected: ${character.fullName}`, `${character.personality}`);
+    }
+  }, []);
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -98,14 +119,19 @@ function AppContent() {
           e.preventDefault();
           handleToggleTaskHistory();
           break;
+        case "3":
+          e.preventDefault();
+          handleToggleCharacterSelect();
+          break;
       }
     };
 
     window.addEventListener("keydown", handleKeyDown);
     return () => window.removeEventListener("keydown", handleKeyDown);
-  }, [handleToggleShortcuts, handleEditMode, handlePlayMode, handleToggleSettings, handleConnect, handleToggleAgentPanel, handleToggleTaskHistory]);
+  }, [handleToggleShortcuts, handleEditMode, handlePlayMode, handleToggleSettings, handleConnect, handleToggleAgentPanel, handleToggleTaskHistory, handleToggleCharacterSelect]);
 
   const isConnected = state.connection === "connected";
+  const selectedChar = getCharacterById(currentCharacter);
 
   return (
     <main className="h-screen w-screen overflow-hidden bg-slate-950">
@@ -145,6 +171,27 @@ function AppContent() {
 
       {/* Top Right - Action Buttons */}
       <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
+        {/* Character Select Button */}
+        <button
+          onClick={handleToggleCharacterSelect}
+          className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
+            showCharacterSelect
+              ? "bg-purple-500 text-white"
+              : "bg-slate-800/80 backdrop-blur border border-slate-700 text-slate-400 hover:text-white"
+          }`}
+          title="Select Character (3)"
+        >
+          <UserCircle size={16} />
+          {selectedChar && (
+            <span 
+              className="text-xs font-medium"
+              style={{ color: selectedChar.color }}
+            >
+              {selectedChar.name}
+            </span>
+          )}
+        </button>
+
         {/* Agent Panel Toggle */}
         <button
           onClick={handleToggleAgentPanel}
@@ -255,13 +302,27 @@ function AppContent() {
       <KeyboardShortcutsOverlay isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
       <SettingsPanel isOpen={showSettings} onClose={() => setShowSettings(false)} />
       <TaskHistory isOpen={showTaskHistory} onClose={() => setShowTaskHistory(false)} />
+      <CharacterSelectPanel
+        isOpen={showCharacterSelect}
+        onClose={() => setShowCharacterSelect(false)}
+        selectedCharacterId={currentCharacter}
+        onSelect={handleCharacterSelect}
+      />
       <OnboardingTutorial />
 
-      {/* Bottom Left - Watermark */}
-      <div className="absolute bottom-2 left-2 z-50 pointer-events-none">
+      {/* Bottom Left - Watermark & Character */}
+      <div className="absolute bottom-2 left-2 z-50 pointer-events-none flex items-center gap-4">
         <p className="text-xs text-slate-600 font-mono">
           Agent Town + Pixel Agents | Powered by OpenClaw
         </p>
+        {selectedChar && (
+          <span 
+            className="text-xs font-mono px-2 py-1 rounded"
+            style={{ backgroundColor: `${selectedChar.color}20`, color: selectedChar.color }}
+          >
+            🎭 {selectedChar.fullName}
+          </span>
+        )}
       </div>
 
       {/* Bottom Right - Mode Indicator */}

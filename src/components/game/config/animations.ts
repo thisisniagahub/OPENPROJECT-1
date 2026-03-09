@@ -6,6 +6,8 @@
  *     Row 0: preview/idle thumbnails
  *     Row 1: idle — right(6) · up(6) · left(6) · down(6)
  *     Row 2: walk — right(6) · up(6) · left(6) · down(6)
+ * 
+ * South Park characters follow similar layout for animation frames.
  */
 
 export const FRAME_WIDTH = 48;
@@ -37,8 +39,11 @@ export interface WorkerSpriteConfig {
   key: string;
   path: string;
   label: string;
+  isSouthPark?: boolean;
+  color?: string;
 }
 
+// Default worker sprites
 export const WORKER_SPRITES: WorkerSpriteConfig[] = [
   { key: "character_02", path: "/characters/Premade_Character_48x48_02.png", label: "Alice" },
   { key: "character_03", path: "/characters/Premade_Character_48x48_03.png", label: "Bob" },
@@ -46,6 +51,37 @@ export const WORKER_SPRITES: WorkerSpriteConfig[] = [
   { key: "character_05", path: "/characters/Premade_Character_48x48_05.png", label: "Dave" },
   { key: "character_06", path: "/characters/Premade_Character_48x48_06.png", label: "Eve" },
 ];
+
+// South Park character sprites
+export const SOUTH_PARK_SPRITES: WorkerSpriteConfig[] = [
+  { key: "southpark_stan", path: "/southpark/stan.png", label: "Stan Marsh", isSouthPark: true, color: "#3B82F6" },
+  { key: "southpark_kyle", path: "/southpark/kyle.png", label: "Kyle Broflovski", isSouthPark: true, color: "#22C55E" },
+  { key: "southpark_cartman", path: "/southpark/cartman.png", label: "Eric Cartman", isSouthPark: true, color: "#EF4444" },
+  { key: "southpark_kenny", path: "/southpark/kenny.png", label: "Kenny McCormick", isSouthPark: true, color: "#F97316" },
+  { key: "southpark_butters", path: "/southpark/butters.png", label: "Butters Stotch", isSouthPark: true, color: "#06B6D4" },
+];
+
+// All available worker sprites
+export const ALL_WORKER_SPRITES: WorkerSpriteConfig[] = [
+  ...WORKER_SPRITES,
+  ...SOUTH_PARK_SPRITES,
+];
+
+// Character storage key
+export const CHARACTER_STORAGE_KEY = "agent-town:selected-character";
+
+// Get selected character from localStorage
+export function getSelectedCharacter(): string {
+  if (typeof window === "undefined") return "character_02";
+  return localStorage.getItem(CHARACTER_STORAGE_KEY) || "character_02";
+}
+
+// Set selected character in localStorage
+export function setSelectedCharacter(characterId: string): void {
+  if (typeof window !== "undefined") {
+    localStorage.setItem(CHARACTER_STORAGE_KEY, characterId);
+  }
+}
 
 const directions = ["right", "up", "left", "down"] as const;
 export type Direction = (typeof directions)[number];
@@ -71,6 +107,39 @@ function rowAnims(prefix: string, row: number, frameRate: number): AnimDef[] {
   }));
 }
 
+// South Park character animation definitions (simplified 4-frame per direction)
+export function makeSouthParkAnims(spriteKey: string, frameRate: number = 8): AnimDef[] {
+  const anims: AnimDef[] = [];
+  const baseFrame = 0;
+  
+  directions.forEach((dir, i) => {
+    // Idle animation
+    anims.push({
+      key: `${spriteKey}:idle-${dir}`,
+      start: baseFrame + i * FRAMES_PER_DIR,
+      end: baseFrame + i * FRAMES_PER_DIR + 3,
+      frameRate: frameRate,
+      repeat: -1,
+    });
+    
+    // Walk animation
+    anims.push({
+      key: `${spriteKey}:walk-${dir}`,
+      start: baseFrame + i * FRAMES_PER_DIR,
+      end: baseFrame + i * FRAMES_PER_DIR + 5,
+      frameRate: frameRate + 2,
+      repeat: -1,
+    });
+  });
+  
+  return anims;
+}
+
 export const IDLE_ANIMS = rowAnims("idle", 1, 8);
 export const WALK_ANIMS = rowAnims("walk", 2, 10);
 export const ALL_ANIMS: AnimDef[] = [...IDLE_ANIMS, ...WALK_ANIMS];
+
+// Generate all South Park animations
+export function getAllSouthParkAnims(): AnimDef[] {
+  return SOUTH_PARK_SPRITES.flatMap(sprite => makeSouthParkAnims(sprite.key, 8));
+}
