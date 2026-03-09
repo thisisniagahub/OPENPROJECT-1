@@ -41,24 +41,101 @@ export interface WorkerSpriteConfig {
   label: string;
   isSouthPark?: boolean;
   color?: string;
+  personality?: string;
+  catchphrases?: string[];
 }
 
 // Default worker sprites
 export const WORKER_SPRITES: WorkerSpriteConfig[] = [
-  { key: "character_02", path: "/characters/Premade_Character_48x48_02.png", label: "Alice" },
-  { key: "character_03", path: "/characters/Premade_Character_48x48_03.png", label: "Bob" },
-  { key: "character_04", path: "/characters/Premade_Character_48x48_04.png", label: "Carol" },
-  { key: "character_05", path: "/characters/Premade_Character_48x48_05.png", label: "Dave" },
-  { key: "character_06", path: "/characters/Premade_Character_48x48_06.png", label: "Eve" },
+  { 
+    key: "character_02", 
+    path: "/characters/Premade_Character_48x48_02.png", 
+    label: "Alice",
+    color: "#8B5CF6",
+    personality: "Friendly and helpful assistant who loves coding",
+    catchphrases: ["Let me help you with that!", "Coding is fun!", "Almost done!"]
+  },
+  { 
+    key: "character_03", 
+    path: "/characters/Premade_Character_48x48_03.png", 
+    label: "Bob",
+    color: "#3B82F6",
+    personality: "Analytical problem solver with attention to detail",
+    catchphrases: ["Interesting problem...", "Let me analyze this.", "Solution found!"]
+  },
+  { 
+    key: "character_04", 
+    path: "/characters/Premade_Character_48x48_04.png", 
+    label: "Carol",
+    color: "#EC4899",
+    personality: "Creative thinker who thinks outside the box",
+    catchphrases: ["What if we try this?", "Creative solution incoming!", "I love challenges!"]
+  },
+  { 
+    key: "character_05", 
+    path: "/characters/Premade_Character_48x48_05.png", 
+    label: "Dave",
+    color: "#10B981",
+    personality: "Methodical worker who ensures quality",
+    catchphrases: ["Quality first!", "Checking the details...", "Done right!"]
+  },
+  { 
+    key: "character_06", 
+    path: "/characters/Premade_Character_48x48_06.png", 
+    label: "Eve",
+    color: "#F59E0B",
+    personality: "Fast and efficient multitasker",
+    catchphrases: ["Multitasking mode!", "Speed and accuracy!", "Done in no time!"]
+  },
 ];
 
 // South Park character sprites
 export const SOUTH_PARK_SPRITES: WorkerSpriteConfig[] = [
-  { key: "southpark_stan", path: "/southpark/stan.png", label: "Stan Marsh", isSouthPark: true, color: "#3B82F6" },
-  { key: "southpark_kyle", path: "/southpark/kyle.png", label: "Kyle Broflovski", isSouthPark: true, color: "#22C55E" },
-  { key: "southpark_cartman", path: "/southpark/cartman.png", label: "Eric Cartman", isSouthPark: true, color: "#EF4444" },
-  { key: "southpark_kenny", path: "/southpark/kenny.png", label: "Kenny McCormick", isSouthPark: true, color: "#F97316" },
-  { key: "southpark_butters", path: "/southpark/butters.png", label: "Butters Stotch", isSouthPark: true, color: "#06B6D4" },
+  { 
+    key: "southpark_stan", 
+    path: "/southpark/stan.png", 
+    label: "Stan Marsh", 
+    isSouthPark: true, 
+    color: "#3B82F6",
+    personality: "The everyman - level-headed and morally grounded. Often says 'Oh my God, they killed Kenny!'",
+    catchphrases: ["Oh my God!", "This is pretty messed up right here.", "Dude, seriously?", "I learned something today..."]
+  },
+  { 
+    key: "southpark_kyle", 
+    path: "/southpark/kyle.png", 
+    label: "Kyle Broflovski", 
+    isSouthPark: true, 
+    color: "#22C55E",
+    personality: "The moral compass - intelligent, principled, and Jewish. Often gives life lessons.",
+    catchphrases: ["You know, I learned something today...", "This isn't right!", "I'm a Jew, a lonely Jew...", "That's not cool!"]
+  },
+  { 
+    key: "southpark_cartman", 
+    path: "/southpark/cartman.png", 
+    label: "Eric Cartman", 
+    isSouthPark: true, 
+    color: "#EF4444",
+    personality: "The manipulator - narcissistic, scheming, but oddly effective. 'Respect my authoritah!'",
+    catchphrases: ["Respect my authoritah!", "Screw you guys, I'm going home!", "But moooom!", "Kitty!"]
+  },
+  { 
+    key: "southpark_kenny", 
+    path: "/southpark/kenny.png", 
+    label: "Kenny McCormick", 
+    isSouthPark: true, 
+    color: "#F97316",
+    personality: "The immortal - always comes back. Muffled speech but has dark knowledge.",
+    catchphrases: ["Mmph mmph mmph!", "(muffled) Oh my God!", "(muffled) They killed me!", "(muffled) Holy sh*t!"]
+  },
+  { 
+    key: "southpark_butters", 
+    path: "/southpark/butters.png", 
+    label: "Butters Stotch", 
+    isSouthPark: true, 
+    color: "#06B6D4",
+    personality: "The innocent - naive but pure-hearted. Always tries his best.",
+    catchphrases: ["Oh hamburgers!", "I'm just a nice kid!", "Well gosh!", "That's not very nice..."]
+  },
 ];
 
 // All available worker sprites
@@ -81,6 +158,11 @@ export function setSelectedCharacter(characterId: string): void {
   if (typeof window !== "undefined") {
     localStorage.setItem(CHARACTER_STORAGE_KEY, characterId);
   }
+}
+
+// Get character config by key
+export function getCharacterConfig(key: string): WorkerSpriteConfig | undefined {
+  return ALL_WORKER_SPRITES.find(c => c.key === key);
 }
 
 const directions = ["right", "up", "left", "down"] as const;
@@ -142,4 +224,11 @@ export const ALL_ANIMS: AnimDef[] = [...IDLE_ANIMS, ...WALK_ANIMS];
 // Generate all South Park animations
 export function getAllSouthParkAnims(): AnimDef[] {
   return SOUTH_PARK_SPRITES.flatMap(sprite => makeSouthParkAnims(sprite.key, 8));
+}
+
+// Get random catchphrase for character
+export function getRandomCatchphrase(characterKey: string): string {
+  const config = getCharacterConfig(characterKey);
+  if (!config?.catchphrases?.length) return "...";
+  return config.catchphrases[Math.floor(Math.random() * config.catchphrases.length)];
 }
