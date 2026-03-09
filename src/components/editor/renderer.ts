@@ -1,6 +1,6 @@
 // Office Editor Renderer - handles all canvas rendering
 import type { SpriteData, TileType, FurnitureInstance, FloorColor } from './types';
-import { TILE_SIZE, TileType as TileTypeEnum, WALL_COLOR, FALLBACK_FLOOR_COLOR, GRID_LINE_COLOR } from './types';
+import { TILE_SIZE, TileType as TileTypeEnum, WALL_COLOR, GRID_LINE_COLOR, FALLBACK_FLOOR_COLOR } from './types';
 import { getCachedSprite } from './spriteCache';
 import { getFloorSprite } from './spriteData';
 

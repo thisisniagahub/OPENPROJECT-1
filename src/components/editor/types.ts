@@ -175,6 +175,9 @@ export const DEFAULT_FLOOR_COLOR: FloorColor = { h: 35, s: 30, b: 15, c: 0 };
 export const DEFAULT_WALL_COLOR: FloorColor = { h: 240, s: 25, b: 0, c: 0 };
 export const DEFAULT_NEUTRAL_COLOR: FloorColor = { h: 0, s: 0, b: 0, c: 0 };
 
+// Aliases for backward compatibility
+export const WALL_COLOR = '#3a3a5a';
+
 // Editor config
 export const UNDO_STACK_MAX_SIZE = 50;
 export const ZOOM_MIN = 1;
