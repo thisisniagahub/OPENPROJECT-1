@@ -536,7 +536,10 @@ export async function getTaskStatus(
   try {
     const res = await client.request("task.status", { runId });
     const payload = res.payload as { status?: string; progress?: number } | undefined;
-    return payload ?? null;
+    if (payload?.status) {
+      return { status: payload.status, progress: payload.progress };
+    }
+    return null;
   } catch (err) {
     const error = err as Error;
     if (isDebugEnabled()) {
