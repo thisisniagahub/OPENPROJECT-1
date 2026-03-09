@@ -14,7 +14,9 @@ import React from "react";
 import type { SeatState, TaskItem, GatewayConfig } from "@/types/game";
 import type { StudioSnapshot } from "@/types/game";
 import { GatewayClient } from "./gateway";
+import { wireGatewayClient } from "./gateway-handler";
 import { gameEvents } from "./events";
+import { getGatewayUrl, getGatewayToken } from "./env";
 import {
   type PersistedSeatConfig,
   loadGatewayConfig,
@@ -65,10 +67,8 @@ export function useStudio(): StudioContextValue {
 
 // ── Provider ───────────────────────────────────────────
 
-const DEFAULT_URL = typeof window !== "undefined" 
-  ? (process.env.NEXT_PUBLIC_GATEWAY_URL || "ws://127.0.0.1:18789/")
-  : "ws://127.0.0.1:18789/";
-const DEFAULT_TOKEN = process.env.NEXT_PUBLIC_GATEWAY_TOKEN ?? "";
+const DEFAULT_URL = getGatewayUrl();
+const DEFAULT_TOKEN = getGatewayToken();
 
 export function StudioProvider({ children }: { children: ReactNode }) {
   const [state, dispatch] = useReducer(reducer, initialState);
@@ -84,6 +84,14 @@ export function StudioProvider({ children }: { children: ReactNode }) {
   const configRef = useRef<GatewayConfig>({ url: DEFAULT_URL, token: DEFAULT_TOKEN });
   const activeSessionKeyRef = useRef<string | undefined>(undefined);
   const taskCounterRef = useRef(0);
+
+  // Gateway handler refs
+  const seenStartsRef = useRef<Set<string>>(new Set());
+  const bubbleAccumRef = useRef<Map<string, string>>(new Map());
+  const bubbleThrottleTimersRef = useRef<Map<string, ReturnType<typeof setTimeout>>>(new Map());
+  const runActorsRef = useRef<Map<string, string>>(new Map());
+  const modelCatalogRef = useRef<{ current: import("./gateway-handler").ModelChoice[] | null }>({ current: null });
+  const sessionRefreshTimerRef = useRef<{ current: ReturnType<typeof setTimeout> | null }>({ current: null });
 
   const setActiveSessionKey = useCallback((sessionKey?: string) => {
     activeSessionKeyRef.current = sessionKey;
@@ -102,9 +110,22 @@ export function StudioProvider({ children }: { children: ReactNode }) {
     const client = new GatewayClient(cfg.url, cfg.token);
     clientRef.current = client;
 
-    client.onStatus((status) => {
-      dispatchRef.current({ type: "SET_CONNECTION", status });
-    });
+    // Wire gateway client to store
+    const handlerRefs: import("./gateway-handler").HandlerRefs = {
+      dispatch: () => (action: unknown) => dispatchRef.current(action as Action),
+      tasks: () => tasksRef.current,
+      seats: () => seatsRef.current,
+      activeSessionKey: () => activeSessionKeyRef.current,
+      setActiveSessionKey,
+      seenStarts: seenStartsRef.current,
+      bubbleAccum: bubbleAccumRef.current,
+      bubbleThrottleTimers: bubbleThrottleTimersRef.current,
+      runActors: runActorsRef.current,
+      modelCatalog: modelCatalogRef.current,
+      sessionRefreshTimer: sessionRefreshTimerRef.current,
+      taskCounter: taskCounterRef,
+    };
+    wireGatewayClient(client, handlerRefs);
 
     client
       .connect()
@@ -133,7 +154,7 @@ export function StudioProvider({ children }: { children: ReactNode }) {
           },
         });
       });
-  }, []);
+  }, [setActiveSessionKey]);
 
   // ── Bootstrap: restore state + auto-connect ──
 
@@ -175,7 +196,6 @@ export function StudioProvider({ children }: { children: ReactNode }) {
       };
     }
     return unsubSeats;
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   // ── Persist tasks + chat + sessions ──

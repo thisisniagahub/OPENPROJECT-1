@@ -6,6 +6,7 @@
 export type ConnectionStatus =
   | "disconnected"
   | "connecting"
+  | "handshaking"
   | "connected"
   | "error"
   | "auth_failed"

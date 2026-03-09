@@ -1,6 +1,6 @@
 /**
  * Gateway event handler — wires GatewayClient events to store dispatch.
- * Full implementation for OpenClaw integration.
+ * Full implementation for OpenClaw integration with type safety.
  */
 
 import { gameEvents } from "./events";
@@ -8,6 +8,7 @@ import type { GatewayClient } from "./gateway";
 import type { GatewayFrame } from "./gateway-types";
 import type { ChatMessage, TaskItem, SessionMetrics } from "@/types/game";
 import { chatId, findTask, MAIN_SESSION_KEY } from "./reducer";
+import { isDebugEnabled } from "./env";
 
 // ── Types ─────────────────────────────────────────────────────────────
 
@@ -66,6 +67,28 @@ export interface HandlerRefs {
   taskCounter: { current: number };
 }
 
+// ── Type Guards ────────────────────────────────────────────────────────
+
+function isAgentEventPayload(payload: unknown): payload is AgentEventPayload {
+  if (typeof payload !== "object" || payload === null) return false;
+  const p = payload as Record<string, unknown>;
+  return typeof p["runId"] === "string" && typeof p["type"] === "string";
+}
+
+function isChatEventPayload(payload: unknown): payload is ChatEventPayload {
+  if (typeof payload !== "object" || payload === null) return false;
+  const p = payload as Record<string, unknown>;
+  return typeof p["runId"] === "string" && 
+         typeof p["role"] === "string" && 
+         typeof p["content"] === "string";
+}
+
+function isSessionEventPayload(payload: unknown): payload is SessionEventPayload {
+  if (typeof payload !== "object" || payload === null) return false;
+  const p = payload as Record<string, unknown>;
+  return typeof p["sessionKey"] === "string";
+}
+
 // ── Constants ──────────────────────────────────────────────────────────
 
 const BUBBLE_THROTTLE_MS = 300;
@@ -101,31 +124,60 @@ function emitBubble(
   }
 }
 
+function safeDispatch(refs: HandlerRefs, action: unknown) {
+  try {
+    refs.dispatch()(action);
+  } catch (err) {
+    if (isDebugEnabled()) {
+      console.error("[GatewayHandler] Dispatch error:", err);
+    }
+  }
+}
+
 // ── Main Wire Function ──────────────────────────────────────────────────
 
 export function wireGatewayClient(client: GatewayClient, refs: HandlerRefs) {
+  const debug = isDebugEnabled();
+
   // Connection status
   client.onStatus((status) => {
-    refs.dispatch()({ type: "SET_CONNECTION", status });
+    safeDispatch(refs, { type: "SET_CONNECTION", status });
     
     if (status === "connected") {
       // Request model catalog on connect
       client.request("models.list", {}).then((res) => {
-        const models = (res.payload as { models?: ModelChoice[] })?.models || [];
+        const payload = res.payload as { models?: ModelChoice[] } | undefined;
+        const models = payload?.models || [];
         refs.modelCatalog.current = models;
-      }).catch(() => {});
+        
+        if (debug) {
+          console.log(`[GatewayHandler] Loaded ${models.length} models`);
+        }
+      }).catch((err) => {
+        if (debug) {
+          console.warn("[GatewayHandler] Failed to load models:", err.message);
+        }
+      });
     }
   });
 
   // Agent events - main execution stream
   client.on("agent", (payload: unknown) => {
-    const p = payload as AgentEventPayload;
-    const { runId, type } = p;
-    if (!runId || !type) return;
+    if (!isAgentEventPayload(payload)) {
+      if (debug) {
+        console.warn("[GatewayHandler] Invalid agent event payload:", payload);
+      }
+      return;
+    }
 
+    const { runId, type } = payload;
     const task = findTask(refs.tasks(), runId);
     const sessionKey = task?.sessionKey ?? refs.activeSessionKey() ?? MAIN_SESSION_KEY;
     const actorName = refs.runActors.get(runId);
+
+    if (debug) {
+      console.log(`[GatewayHandler] Agent event: ${type} for ${runId}`);
+    }
 
     switch (type) {
       case "start": {
@@ -134,20 +186,23 @@ export function wireGatewayClient(client: GatewayClient, refs: HandlerRefs) {
           refs.seenStarts.add(runId);
           
           // Update task status
-          refs.dispatch()({
+          safeDispatch(refs, {
             type: "UPDATE_TASK",
             taskId: runId,
             patch: { status: "running" },
           });
+
+          // Show bubble
+          emitBubble(runId, "Starting...", refs, 2000);
         }
         break;
       }
 
       case "delta": {
-        const delta = p.delta || p.content || "";
+        const delta = payload.delta || payload.content || "";
         if (delta) {
           // Append to streaming message
-          refs.dispatch()({
+          safeDispatch(refs, {
             type: "APPEND_DELTA",
             runId,
             delta,
@@ -161,10 +216,10 @@ export function wireGatewayClient(client: GatewayClient, refs: HandlerRefs) {
       }
 
       case "tool_start": {
-        const toolName = p.toolName || "tool";
+        const toolName = payload.toolName || "tool";
         
         // Add tool message
-        refs.dispatch()({
+        safeDispatch(refs, {
           type: "APPEND_CHAT",
           message: {
             id: chatId(),
@@ -172,7 +227,7 @@ export function wireGatewayClient(client: GatewayClient, refs: HandlerRefs) {
             role: "tool",
             content: `Using ${toolName}...`,
             toolName,
-            toolInput: p.toolInput,
+            toolInput: payload.toolInput,
             timestamp: new Date().toISOString(),
             sessionKey,
             actorName,
@@ -184,12 +239,20 @@ export function wireGatewayClient(client: GatewayClient, refs: HandlerRefs) {
         break;
       }
 
+      case "tool_delta": {
+        const delta = payload.delta || payload.content || "";
+        if (delta) {
+          emitBubble(runId, delta, refs);
+        }
+        break;
+      }
+
       case "tool_end": {
-        const toolName = p.toolName || "tool";
+        const toolName = payload.toolName || "tool";
         
         // Update tool message with result
-        if (p.toolOutput) {
-          refs.dispatch()({
+        if (payload.toolOutput) {
+          safeDispatch(refs, {
             type: "APPEND_CHAT",
             message: {
               id: chatId(),
@@ -197,20 +260,22 @@ export function wireGatewayClient(client: GatewayClient, refs: HandlerRefs) {
               role: "tool",
               content: `${toolName} completed`,
               toolName,
-              toolOutput: p.toolOutput,
+              toolOutput: payload.toolOutput,
               timestamp: new Date().toISOString(),
               sessionKey,
               actorName,
             } as ChatMessage,
           });
         }
+
+        emitBubble(runId, `✓ ${toolName}`, refs, 2000);
         break;
       }
 
       case "end": {
         // Finalize streaming message
-        const content = p.content || "";
-        refs.dispatch()({
+        const content = payload.content || "";
+        safeDispatch(refs, {
           type: "FINALIZE_ASSISTANT",
           runId,
           content,
@@ -218,7 +283,7 @@ export function wireGatewayClient(client: GatewayClient, refs: HandlerRefs) {
         });
 
         // Update task status
-        refs.dispatch()({
+        safeDispatch(refs, {
           type: "UPDATE_TASK",
           taskId: runId,
           patch: { 
@@ -229,15 +294,15 @@ export function wireGatewayClient(client: GatewayClient, refs: HandlerRefs) {
         });
 
         // Update session metrics
-        if (p.usage || p.model) {
-          refs.dispatch()({
+        if (payload.usage || payload.model) {
+          safeDispatch(refs, {
             type: "SET_SESSION_METRICS",
             metrics: {
-              usedTokens: p.usage?.totalTokens,
-              inputTokens: p.usage?.inputTokens,
-              outputTokens: p.usage?.outputTokens,
-              model: p.model,
-              provider: p.provider,
+              usedTokens: payload.usage?.totalTokens,
+              inputTokens: payload.usage?.inputTokens,
+              outputTokens: payload.usage?.outputTokens,
+              model: payload.model,
+              provider: payload.provider,
               fresh: true,
               updatedAt: new Date().toISOString(),
             },
@@ -250,13 +315,14 @@ export function wireGatewayClient(client: GatewayClient, refs: HandlerRefs) {
         // Clear bubble state
         refs.bubbleAccum.delete(runId);
         refs.seenStarts.delete(runId);
+        refs.runActors.delete(runId);
         break;
       }
 
       case "error": {
-        const errorMsg = p.error || "Unknown error";
+        const errorMsg = payload.error || "Unknown error";
         
-        refs.dispatch()({
+        safeDispatch(refs, {
           type: "APPEND_CHAT",
           message: {
             id: chatId(),
@@ -268,7 +334,7 @@ export function wireGatewayClient(client: GatewayClient, refs: HandlerRefs) {
           },
         });
 
-        refs.dispatch()({
+        safeDispatch(refs, {
           type: "UPDATE_TASK",
           taskId: runId,
           patch: { 
@@ -282,6 +348,7 @@ export function wireGatewayClient(client: GatewayClient, refs: HandlerRefs) {
         
         refs.bubbleAccum.delete(runId);
         refs.seenStarts.delete(runId);
+        refs.runActors.delete(runId);
         break;
       }
     }
@@ -289,25 +356,29 @@ export function wireGatewayClient(client: GatewayClient, refs: HandlerRefs) {
 
   // Chat events - direct messages
   client.on("chat", (payload: unknown) => {
-    const p = payload as ChatEventPayload;
-    const { runId, role, content } = p;
-    if (!runId || !role || !content) return;
+    if (!isChatEventPayload(payload)) {
+      if (debug) {
+        console.warn("[GatewayHandler] Invalid chat event payload:", payload);
+      }
+      return;
+    }
 
+    const { runId, role, content } = payload;
     const task = findTask(refs.tasks(), runId);
     const sessionKey = task?.sessionKey ?? refs.activeSessionKey() ?? MAIN_SESSION_KEY;
     const actorName = refs.runActors.get(runId);
 
-    refs.dispatch()({
+    safeDispatch(refs, {
       type: "APPEND_CHAT",
       message: {
         id: chatId(),
         runId,
         role,
         content,
-        toolName: p.toolName,
-        toolInput: p.toolInput,
-        toolOutput: p.toolOutput,
-        timestamp: p.timestamp || new Date().toISOString(),
+        toolName: payload.toolName,
+        toolInput: payload.toolInput,
+        toolOutput: payload.toolOutput,
+        timestamp: payload.timestamp || new Date().toISOString(),
         sessionKey,
         actorName,
       } as ChatMessage,
@@ -316,11 +387,17 @@ export function wireGatewayClient(client: GatewayClient, refs: HandlerRefs) {
 
   // Session events
   client.on("session", (payload: unknown) => {
-    const p = payload as SessionEventPayload;
-    if (p.metrics) {
-      refs.dispatch()({
+    if (!isSessionEventPayload(payload)) {
+      if (debug) {
+        console.warn("[GatewayHandler] Invalid session event payload:", payload);
+      }
+      return;
+    }
+
+    if (payload.metrics) {
+      safeDispatch(refs, {
         type: "SET_SESSION_METRICS",
-        metrics: p.metrics,
+        metrics: payload.metrics,
       });
     }
   });
@@ -329,7 +406,8 @@ export function wireGatewayClient(client: GatewayClient, refs: HandlerRefs) {
   client.onFinalResponse((frame: unknown) => {
     const f = frame as GatewayFrame;
     if (!f.ok) {
-      const runId = (f.payload as { runId?: string })?.runId;
+      const payload = f.payload as { runId?: string } | undefined;
+      const runId = payload?.runId;
       if (runId) {
         gameEvents.emit("task-failed", runId);
       }
@@ -338,12 +416,28 @@ export function wireGatewayClient(client: GatewayClient, refs: HandlerRefs) {
 
   // Sub-agent events
   client.on("subagent", (payload: unknown) => {
-    const p = payload as { parentRunId?: string; runId?: string; label?: string };
-    if (p.parentRunId && p.runId && p.label) {
+    const p = payload as { parentRunId?: string; runId?: string; label?: string } | null;
+    if (p?.parentRunId && p.runId && p.label) {
       gameEvents.emit("subagent-assigned", p.runId, p.parentRunId, p.label);
       refs.runActors.set(p.runId, p.label);
+      
+      if (debug) {
+        console.log(`[GatewayHandler] Sub-agent assigned: ${p.label} (${p.runId})`);
+      }
     }
   });
+
+  // Connection state events
+  client.on("connect.state", (payload: unknown) => {
+    const p = payload as { state?: string; reason?: string } | null;
+    if (debug) {
+      console.log(`[GatewayHandler] Connect state: ${p?.state} - ${p?.reason}`);
+    }
+  });
+
+  if (debug) {
+    console.log("[GatewayHandler] Wired all event handlers");
+  }
 }
 
 // ── Session Preview Loader ──────────────────────────────────────────────
@@ -360,13 +454,17 @@ export async function loadSessionPreview(
       limit: 50,
     });
 
-    const messages = (res.payload as { messages?: ChatMessage[] })?.messages || [];
+    const payload = res.payload as { messages?: ChatMessage[] } | undefined;
+    const messages = payload?.messages || [];
     return messages.map((msg) => ({
       ...msg,
       sessionKey,
     }));
   } catch (err) {
-    console.error("[Gateway] sessions.preview failed:", err);
+    const error = err as Error;
+    if (isDebugEnabled()) {
+      console.error("[Gateway] sessions.preview failed:", error.message);
+    }
     return [];
   }
 }
@@ -383,7 +481,10 @@ export async function setModel(
     await client.request("model.set", { modelId });
     return true;
   } catch (err) {
-    console.error("[Gateway] model.set failed:", err);
+    const error = err as Error;
+    if (isDebugEnabled()) {
+      console.error("[Gateway] model.set failed:", error.message);
+    }
     return false;
   }
 }
@@ -395,9 +496,52 @@ export async function getAvailableModels(
 
   try {
     const res = await client.request("models.list", {});
-    return (res.payload as { models?: ModelChoice[] })?.models || [];
+    const payload = res.payload as { models?: ModelChoice[] } | undefined;
+    return payload?.models || [];
   } catch (err) {
-    console.error("[Gateway] models.list failed:", err);
+    const error = err as Error;
+    if (isDebugEnabled()) {
+      console.error("[Gateway] models.list failed:", error.message);
+    }
     return [];
+  }
+}
+
+// ── Task Operations ─────────────────────────────────────────────────────
+
+export async function cancelTask(
+  client: GatewayClient,
+  runId: string,
+): Promise<boolean> {
+  if (client.status !== "connected") return false;
+
+  try {
+    await client.request("task.cancel", { runId });
+    return true;
+  } catch (err) {
+    const error = err as Error;
+    if (isDebugEnabled()) {
+      console.error("[Gateway] task.cancel failed:", error.message);
+    }
+    return false;
+  }
+}
+
+export async function getTaskStatus(
+  client: GatewayClient,
+  runId: string,
+): Promise<{ status: string; progress?: number } | null> {
+  if (client.status !== "connected") return null;
+
+  try {
+    const res = await client.request("task.status", { runId });
+    const payload = res.payload as { status?: string; progress?: number } | undefined;
+    return payload ?? null;
+  } catch (err) {
+    const error = err as Error;
+    if (isDebugEnabled()) {
+      console.error("[Gateway] task.status failed:", error.message);
+    }
+    return null;
   }
 }

@@ -48,12 +48,13 @@ export const STUCK_MOVE_THRESHOLD = 0.5;
 // ── UI labels ────────────────────────────────────────────
 export const STATUS_LABELS: Record<ConnectionStatus, string> = {
   disconnected: "Offline",
-  connecting: "Connecting",
+  connecting: "Connecting...",
+  handshaking: "Authenticating...",
   connected: "Online",
   error: "Error",
-  auth_failed: "Offline",
+  auth_failed: "Auth Failed",
   unreachable: "Offline",
-  rate_limited: "Offline",
+  rate_limited: "Rate Limited",
 };
 
 // ── Persistence keys ─────────────────────────────────────

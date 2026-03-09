@@ -1,14 +1,28 @@
 "use client";
 
 import { useRef, useEffect, useState, useCallback } from "react";
-import { Undo2, Redo2, Save, Download, Upload, Plus, Minus, Move, MousePointer, Eraser } from "lucide-react";
+import { Undo2, Redo2, Save, Download, Plus, Minus, Move, MousePointer, Eraser } from "lucide-react";
 import {
   renderFrame,
   type EditorRenderState,
 } from "./renderer";
-import type { TileType, FurnitureInstance, FloorColor } from "./types";
+import type { TileType, FloorColor } from "./types";
 import { TILE_SIZE, TileType as TileTypeEnum } from "./types";
-import { FURNITURE_CATALOG, type FurnitureDef } from "./furnitureCatalog";
+import { FURNITURE_CATALOG, type CatalogEntryWithCategory } from "./furnitureCatalog";
+
+// ── Extended Types for Editor ─────────────────────────────────────────────────
+
+interface EditorFurniture {
+  uid: string;
+  type: string;
+  sprite: string[][];
+  x: number;
+  y: number;
+  zY: number;
+  width: number;
+  height: number;
+  rotation: number;
+}
 
 // Default office layout
 const DEFAULT_COLS = 20;
@@ -16,7 +30,7 @@ const DEFAULT_ROWS = 15;
 
 function createEmptyTileMap(cols: number, rows: number): TileType[][] {
   return Array.from({ length: rows }, () =>
-    Array.from({ length: cols }, () => TileTypeEnum.FLOOR)
+    Array.from({ length: cols }, () => TileTypeEnum.FLOOR_1)
   );
 }
 
@@ -25,7 +39,7 @@ interface OfficeLayout {
   rows: number;
   tileMap: TileType[][];
   tileColors: Array<FloorColor | null>;
-  furniture: FurnitureInstance[];
+  furniture: EditorFurniture[];
 }
 
 function createDefaultLayout(): OfficeLayout {
@@ -115,16 +129,16 @@ export default function OfficeEditor() {
   }, [layout.cols, layout.rows, zoom, pan]);
   
   // Place furniture
-  const placeFurniture = useCallback((col: number, row: number, def: FurnitureDef) => {
-    const newFurniture: FurnitureInstance = {
-      uid: `furniture_${Date.now()}`,
+  const placeFurniture = useCallback((col: number, row: number, def: CatalogEntryWithCategory) => {
+    const newFurniture: EditorFurniture = {
+      uid: `furniture_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`,
       type: def.type,
       sprite: def.sprite,
       x: col * TILE_SIZE,
       y: row * TILE_SIZE,
-      zY: row * TILE_SIZE + def.offsetY,
-      width: def.width,
-      height: def.height,
+      zY: row * TILE_SIZE + (def.sprite.length || 1),
+      width: def.footprintW,
+      height: def.footprintH,
       rotation: 0,
     };
     
@@ -165,7 +179,7 @@ export default function OfficeEditor() {
         placeFurniture(tile.col, tile.row, def);
       }
     } else if (activeTool === "paint") {
-      paintTile(tile.col, tile.row, TileTypeEnum.FLOOR);
+      paintTile(tile.col, tile.row, TileTypeEnum.FLOOR_1);
     } else if (activeTool === "erase") {
       paintTile(tile.col, tile.row, TileTypeEnum.VOID);
     }
@@ -217,13 +231,21 @@ export default function OfficeEditor() {
       ghostBorderHoverRow: -1,
     };
     
+    // Convert EditorFurniture to FurnitureInstance format for renderer
+    const furnitureForRenderer = layout.furniture.map(f => ({
+      sprite: f.sprite,
+      x: f.x,
+      y: f.y,
+      zY: f.zY,
+    }));
+    
     // Render
     renderFrame(
       ctx,
       canvas.width,
       canvas.height,
       layout.tileMap,
-      layout.furniture,
+      furnitureForRenderer,
       zoom,
       pan.x,
       pan.y,
@@ -233,7 +255,7 @@ export default function OfficeEditor() {
       layout.rows
     );
     
-    // Draw ghost furniture
+    // Draw ghost furniture preview
     if (ghostPosition && activeTool === "furniture" && selectedFurniture) {
       const def = FURNITURE_CATALOG.find(f => f.type === selectedFurniture);
       if (def) {
@@ -241,10 +263,10 @@ export default function OfficeEditor() {
         ctx.globalAlpha = 0.5;
         ctx.fillStyle = "#6366f1";
         ctx.fillRect(
-          ghostPosition.col * TILE_SIZE * zoom + pan.x,
-          ghostPosition.row * TILE_SIZE * zoom + pan.y,
-          def.width * TILE_SIZE * zoom,
-          def.height * TILE_SIZE * zoom
+          ghostPosition.col * TILE_SIZE * zoom + pan.x + (canvas.width - layout.cols * TILE_SIZE * zoom) / 2,
+          ghostPosition.row * TILE_SIZE * zoom + pan.y + (canvas.height - layout.rows * TILE_SIZE * zoom) / 2,
+          def.footprintW * TILE_SIZE * zoom,
+          def.footprintH * TILE_SIZE * zoom
         );
         ctx.restore();
       }
@@ -382,7 +404,7 @@ export default function OfficeEditor() {
         <div className="absolute left-4 top-20 z-40 p-2 bg-slate-800/90 backdrop-blur border border-slate-700 rounded-lg max-h-96 overflow-y-auto">
           <div className="text-xs text-slate-400 mb-2 font-medium">Furniture</div>
           <div className="grid grid-cols-3 gap-1">
-            {FURNITURE_CATALOG.slice(0, 12).map((item) => (
+            {FURNITURE_CATALOG.map((item) => (
               <button
                 key={item.type}
                 onClick={() => setSelectedFurniture(item.type)}
@@ -391,9 +413,9 @@ export default function OfficeEditor() {
                     ? "bg-purple-500 text-white"
                     : "bg-slate-700 text-slate-300 hover:bg-slate-600"
                 }`}
-                title={item.name}
+                title={item.label}
               >
-                {item.name.slice(0, 6)}
+                {item.label.slice(0, 6)}
               </button>
             ))}
           </div>
