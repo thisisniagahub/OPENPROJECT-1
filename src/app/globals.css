@@ -76,6 +76,16 @@
   --sidebar-accent-foreground: oklch(0.985 0 0);
   --sidebar-border: oklch(0.3 0.02 260);
   --sidebar-ring: oklch(0.75 0.15 85);
+  
+  /* Pixel UI custom properties */
+  --pixel-bg: rgba(15, 15, 30, 0.95);
+  --pixel-border: #2a2a4a;
+  --pixel-text: #e0e0e0;
+  --pixel-yellow: #facc15;
+  --pixel-green: #22c55e;
+  --pixel-red: #ef4444;
+  --pixel-blue: #3b82f6;
+  --pixel-purple: #a855f7;
 }
 
 .dark {
@@ -121,7 +131,10 @@
   }
 }
 
-/* Pixel font for game UI */
+/* ─────────────────────────────────────────────────────────────────────────
+   Pixel Font
+   ───────────────────────────────────────────────────────────────────────── */
+
 @font-face {
   font-family: 'Ark Pixel';
   src: url('/fonts/ark-pixel-12px.woff2') format('woff2');
@@ -135,13 +148,19 @@
   image-rendering: pixelated;
 }
 
-/* Game canvas styles */
+/* ─────────────────────────────────────────────────────────────────────────
+   Game Canvas
+   ───────────────────────────────────────────────────────────────────────── */
+
 canvas {
   image-rendering: pixelated;
   image-rendering: crisp-edges;
 }
 
-/* HUD styles from Agent Town */
+/* ─────────────────────────────────────────────────────────────────────────
+   HUD Overlay Layout
+   ───────────────────────────────────────────────────────────────────────── */
+
 .hud-overlay {
   position: absolute;
   top: 0;
@@ -159,15 +178,23 @@ canvas {
   pointer-events: auto;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   Pixel Panel Styles
+   ───────────────────────────────────────────────────────────────────────── */
+
 .pixel-panel {
-  background: rgba(15, 15, 30, 0.95);
-  border: 2px solid #2a2a4a;
+  background: var(--pixel-bg);
+  border: 2px solid var(--pixel-border);
   border-radius: 4px;
   font-family: 'Ark Pixel', monospace;
   font-size: 10px;
-  color: #e0e0e0;
+  color: var(--pixel-text);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5);
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Status Cluster
+   ───────────────────────────────────────────────────────────────────────── */
 
 .hud-status-cluster {
   padding: 8px 10px;
@@ -182,6 +209,10 @@ canvas {
   gap: 8px;
 }
 
+/* ─────────────────────────────────────────────────────────────────────────
+   HUD Pills
+   ───────────────────────────────────────────────────────────────────────── */
+
 .hud-pill {
   display: inline-flex;
   align-items: center;
@@ -194,17 +225,13 @@ canvas {
   white-space: nowrap;
 }
 
-.hud-pill--connection {
-  color: #a0a0c0;
-}
+.hud-pill--connection { color: #a0a0c0; }
+.hud-pill--model { color: #c0c0e0; }
+.hud-pill--metric { color: #808090; }
 
-.hud-pill--model {
-  color: #c0c0e0;
-}
-
-.hud-pill--metric {
-  color: #808090;
-}
+/* ─────────────────────────────────────────────────────────────────────────
+   Status Dots
+   ───────────────────────────────────────────────────────────────────────── */
 
 .pixel-dot {
   width: 8px;
@@ -214,19 +241,46 @@ canvas {
 }
 
 .pixel-dot--green {
-  background: #22c55e;
-  box-shadow: 0 0 6px #22c55e;
+  background: var(--pixel-green);
+  box-shadow: 0 0 6px var(--pixel-green);
 }
 
 .pixel-dot--yellow {
-  background: #eab308;
-  box-shadow: 0 0 6px #eab308;
+  background: var(--pixel-yellow);
+  box-shadow: 0 0 6px var(--pixel-yellow);
 }
 
 .pixel-dot--red {
-  background: #ef4444;
-  box-shadow: 0 0 6px #ef4444;
+  background: var(--pixel-red);
+  box-shadow: 0 0 6px var(--pixel-red);
 }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Status Badges
+   ───────────────────────────────────────────────────────────────────────── */
+
+.hud-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 6px;
+  border-radius: 3px;
+  font-size: 8px;
+  font-weight: bold;
+  text-transform: uppercase;
+}
+
+.hud-status--submitted { background: #1e3a5f; color: #60a5fa; }
+.hud-status--queued { background: #3d3d1e; color: #fbbf24; }
+.hud-status--returning { background: #3d3d1e; color: #fbbf24; }
+.hud-status--running { background: #1e5f3d; color: #4ade80; }
+.hud-status--completed { background: #1e5f3d; color: #4ade80; }
+.hud-status--failed { background: #5f1e1e; color: #f87171; }
+.hud-status--stopped { background: #3d3d3d; color: #9ca3af; }
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Dock Container
+   ───────────────────────────────────────────────────────────────────────── */
 
 .hud-dock-container {
   flex: 1;
@@ -246,7 +300,188 @@ canvas {
   flex-shrink: 0;
 }
 
-/* Scrollbar styling */
+/* ─────────────────────────────────────────────────────────────────────────
+   Chat Panel
+   ───────────────────────────────────────────────────────────────────────── */
+
+.hud-chat {
+  flex: 1;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 4px;
+  min-height: 0;
+}
+
+.hud-empty {
+  text-align: center;
+  color: #64748b;
+  padding: 24px 8px;
+  font-size: 9px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   List Items
+   ───────────────────────────────────────────────────────────────────────── */
+
+.hud-list {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  overflow-y: auto;
+  max-height: 300px;
+}
+
+.hud-list__item {
+  background: rgba(30, 30, 60, 0.5);
+  border: 1px solid #2a2a4a;
+  border-radius: 4px;
+  padding: 8px;
+}
+
+.hud-list__top {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.hud-list__title {
+  font-size: 9px;
+  color: #e2e8f0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Panel Stack
+   ───────────────────────────────────────────────────────────────────────── */
+
+.hud-panel__stack {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.hud-panel__label {
+  font-size: 8px;
+  color: #64748b;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.hud-panel__input {
+  width: 100%;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Pixel Input
+   ───────────────────────────────────────────────────────────────────────── */
+
+.pixel-input {
+  background: rgba(15, 15, 30, 0.8);
+  border: 2px solid #2a2a4a;
+  border-radius: 4px;
+  color: #e2e8f0;
+  font-family: 'Ark Pixel', monospace;
+  font-size: 10px;
+  padding: 8px 10px;
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.pixel-input:focus {
+  border-color: var(--pixel-yellow);
+}
+
+.pixel-input:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pixel-input::placeholder {
+  color: #4a4a6a;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Pixel Button
+   ───────────────────────────────────────────────────────────────────────── */
+
+.pixel-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  background: transparent;
+  border: 2px solid #2a2a4a;
+  border-radius: 4px;
+  color: #94a3b8;
+  font-family: 'Ark Pixel', monospace;
+  font-size: 10px;
+  padding: 8px 16px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pixel-button:hover:not(:disabled) {
+  border-color: #4a4a6a;
+  color: #e2e8f0;
+}
+
+.pixel-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.pixel-button--primary {
+  background: var(--pixel-yellow);
+  border-color: var(--pixel-yellow);
+  color: #000;
+}
+
+.pixel-button--primary:hover:not(:disabled) {
+  background: #fde047;
+  border-color: #fde047;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Icon Button
+   ───────────────────────────────────────────────────────────────────────── */
+
+.pixel-icon-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: 2px solid #2a2a4a;
+  border-radius: 4px;
+  color: #94a3b8;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.pixel-icon-btn:hover:not(:disabled) {
+  border-color: #4a4a6a;
+  color: #e2e8f0;
+}
+
+.pixel-icon-btn--primary {
+  background: var(--pixel-yellow);
+  border-color: var(--pixel-yellow);
+  color: #000;
+}
+
+.pixel-icon-btn--primary:hover:not(:disabled) {
+  background: #fde047;
+  border-color: #fde047;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Scrollbar
+   ───────────────────────────────────────────────────────────────────────── */
+
 ::-webkit-scrollbar {
   width: 6px;
 }
@@ -264,23 +499,69 @@ canvas {
   background: #4a4a7a;
 }
 
-/* Animation for loading spinner */
+/* ─────────────────────────────────────────────────────────────────────────
+   Animations
+   ───────────────────────────────────────────────────────────────────────── */
+
 @keyframes spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
 }
 
 .animate-spin {
   animation: spin 1s linear infinite;
 }
 
-/* Focus styles */
+@keyframes pulse {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0.5; }
+}
+
+.animate-pulse {
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-4px); }
+}
+
+.animate-float {
+  animation: float 3s ease-in-out infinite;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Focus Styles
+   ───────────────────────────────────────────────────────────────────────── */
+
 button:focus-visible,
-input:focus-visible {
+input:focus-visible,
+textarea:focus-visible {
   outline: 2px solid var(--ring);
   outline-offset: 2px;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Selection
+   ───────────────────────────────────────────────────────────────────────── */
+
+::selection {
+  background: rgba(250, 204, 21, 0.3);
+  color: #fff;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────
+   Responsive Adjustments
+   ───────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .hud-overlay {
+    width: 100%;
+    max-width: 280px;
+    padding: 8px;
+  }
+  
+  .pixel-panel {
+    font-size: 9px;
+  }
 }
