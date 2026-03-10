@@ -65,7 +65,7 @@ export function NotificationProvider({ children }: { children: React.ReactNode }
 
     // Show browser notification if permitted
     if (typeof window !== "undefined" && "Notification" in window && Notification.permission === "granted") {
-      new BrowserNotification(notification.title, {
+      new Notification(notification.title, {
         body: notification.message,
         icon: "/favicon.ico",
       });
@@ -204,17 +204,15 @@ export default function NotificationCenter({ isOpen, onClose }: NotificationCent
         <div className="flex items-center gap-1 px-4 py-2 border-b border-slate-700 bg-slate-800/50">
           <button
             onClick={() => setFilter("all")}
-            className={`px-3 py-1 text-xs rounded-full transition-colors ${
-              filter === "all" ? "bg-white text-black" : "bg-slate-700 text-slate-300"
-            }`}
+            className={`px-3 py-1 text-xs rounded-full transition-colors ${filter === "all" ? "bg-white text-black" : "bg-slate-700 text-slate-300"
+              }`}
           >
             All ({notifications.length})
           </button>
           <button
             onClick={() => setFilter("unread")}
-            className={`px-3 py-1 text-xs rounded-full transition-colors ${
-              filter === "unread" ? "bg-white text-black" : "bg-slate-700 text-slate-300"
-            }`}
+            className={`px-3 py-1 text-xs rounded-full transition-colors ${filter === "unread" ? "bg-white text-black" : "bg-slate-700 text-slate-300"
+              }`}
           >
             Unread ({unreadCount})
           </button>
@@ -243,9 +241,8 @@ export default function NotificationCenter({ isOpen, onClose }: NotificationCent
                 return (
                   <div
                     key={notification.id}
-                    className={`p-4 hover:bg-slate-800/50 transition-colors ${
-                      !notification.read ? "bg-slate-800/30" : ""
-                    }`}
+                    className={`p-4 hover:bg-slate-800/50 transition-colors ${!notification.read ? "bg-slate-800/30" : ""
+                      }`}
                     onClick={() => markAsRead(notification.id)}
                   >
                     <div className="flex items-start gap-3">
@@ -314,9 +311,8 @@ export function ToastNotification({ notification, onClose }: ToastNotificationPr
 
   return (
     <div
-      className={`flex items-start gap-3 p-4 bg-slate-800 border border-slate-700 rounded-lg shadow-lg animate-slide-in ${
-        notification.type === "error" ? "border-red-500/50" : ""
-      }`}
+      className={`flex items-start gap-3 p-4 bg-slate-800 border border-slate-700 rounded-lg shadow-lg animate-slide-in ${notification.type === "error" ? "border-red-500/50" : ""
+        }`}
     >
       <div className={`p-1 ${config.color}`}>{config.icon}</div>
       <div className="flex-1">

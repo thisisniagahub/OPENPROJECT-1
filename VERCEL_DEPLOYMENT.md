@@ -63,8 +63,9 @@ Pastikan setup environment variables di Vercel Dashboard:
 2. Tambah variables dari `.env.example`:
 
 ```env
-NEXT_PUBLIC_OPENCLAW_URL=your_openclaw_url
-OPENCLAW_API_KEY=your_api_key
+DATABASE_URL="file:./db/custom.db"
+OPENPROJECT_API_TOKEN="your_secure_bearer_token"
+NEXT_PUBLIC_GATEWAY_URL="wss://live.openclaw-gateway.example"
 ```
 
 ---

@@ -1,0 +1,217 @@
+# Neon Cyberpunk
+
+## Product Overview
+
+**The Pitch:** An advanced command center for monitoring, configuring, and deploying AGI agents in real-time. It transforms complex telemetry and autonomous agent behaviors into an immersive, highly actionable control interface.
+
+**For:** AI engineers, system operators, and deployment managers who need high-density data visualization and instant command execution.
+
+**Device:** desktop
+
+**Design Direction:** High-tech neon cyberpunk dashboard featuring deep dark backgrounds, frosted glassmorphism, aggressive glowing cyan/magenta accents, and dense technical typography.
+
+**Inspired by:** Ghost in the Shell interfaces, Cyberpunk 2077 UI, Palantir Foundry.
+
+---
+
+## Screens
+
+- **Main Dashboard:** High-level system overview with central 3D visualizer, live status, and mini-terminal.
+- **Agent Telemetry:** Deep-dive into a specific agent's neural load, memory usage, and task queue.
+- **Command Terminal:** Full-screen CLI interface for direct AGI override and manual prompt injection.
+- **Analytics Matrix:** Dense data visualization grids showing multi-agent performance and resource consumption.
+
+---
+
+## Key Flows
+
+**Agent Override Intervention:** Operator manually interrupts an autonomous agent task.
+
+1. User is on Main Dashboard -> sees `CRITICAL` neural load alert on Agent-04.
+2. User clicks **[Agent-04 Card]** -> screen transitions to Agent Telemetry.
+3. User clicks **[Halt Execution]** -> Command Terminal slides up, auto-focuses input prompt.
+4. User types `sys.override --force` -> Agent status shifts to `MANUAL_MODE` with flashing magenta border.
+
+---
+
+<details>
+<summary>Design System</summary>
+
+## Color Palette
+
+- **Primary:** `#00F0FF` (Neon Cyan) - Primary buttons, active tabs, core data lines
+- **Background:** `#05050A` (Void Black) - Deep app background
+- **Surface:** `rgba(10, 15, 25, 0.6)` (Glass Navy) - Panel backgrounds, cards
+- **Text:** `#E0E5FF` (Ice White) - Body copy, standard values
+- **Muted:** `#4A5578` (Steel Blue) - Grid lines, inactive text, secondary borders
+- **Accent 1:** `#FF003C` (Corpo Red) - Critical errors, destructive actions
+- **Accent 2:** `#B026FF` (Synth Purple) - Secondary glows, neural network visuals
+
+## Typography
+
+Choose fonts that are **distinctive and characterful**, not generic defaults.
+
+- **Headings:** Space Grotesk, 700, 24-32px, tracking 1px
+- **Body:** Rajdhani, 500, 16px, tracking 0.5px
+- **Data/Terminal:** JetBrains Mono, 400, 13px, tracking 0px
+- **Buttons:** Space Grotesk, 600, 14px, uppercase, tracking 2px
+
+**Style notes:** Hard edges (0-2px border radius). Heavy use of `backdrop-filter: blur(12px)`. Borders are thin `1px solid rgba(0, 240, 255, 0.2)` with active elements getting intense drop-shadow glows (`box-shadow: 0 0 10px #00F0FF, 0 0 20px #00F0FF`). Diagonal cut corners (clip-path) on primary UI elements.
+
+## Design Tokens
+
+```css
+:root {
+  --color-primary: #00F0FF;
+  --color-background: #05050A;
+  --color-surface: rgba(10, 15, 25, 0.6);
+  --color-text: #E0E5FF;
+  --color-muted: #4A5578;
+  --color-error: #FF003C;
+  --color-purple: #B026FF;
+  
+  --font-display: 'Space Grotesk', sans-serif;
+  --font-body: 'Rajdhani', sans-serif;
+  --font-mono: 'JetBrains Mono', monospace;
+  
+  --radius: 2px;
+  --spacing-sm: 8px;
+  --spacing-md: 16px;
+  --spacing-lg: 32px;
+  
+  --glow-cyan: 0 0 8px rgba(0, 240, 255, 0.6), inset 0 0 8px rgba(0, 240, 255, 0.2);
+  --glow-red: 0 0 12px rgba(255, 0, 60, 0.8);
+  --border-glass: 1px solid rgba(0, 240, 255, 0.15);
+}
+```
+
+</details>
+
+---
+
+<details>
+<summary>Screen Specifications</summary>
+
+### Main Dashboard
+
+**Purpose:** Command center hub combining real-time 3D monitoring, agent vitals, and system alerts.
+
+**Layout:** 3-column holy grail. Left: Agent list. Center: Large 3D spatial view + quick terminal. Right: Core analytics and alert feed.
+
+**Key Elements:**
+- **Central Spatial View:** `width: 100%`, rotating 3D wireframe globe. Cyan nodes representing active agents.
+- **Agent Roster List:** Vertical list of agents. `border-left: 2px solid #00F0FF` for active selection. Shows CPU/Neural load mini-bars.
+- **Alert Feed:** Scrolling text list, JetBrains Mono. Red highlights for `ERR`, Cyan for `SYS`.
+- **Quick Terminal:** Fixed bottom-center input field. `>_` prompt, blinking cursor.
+
+**States:**
+- **Empty:** "NO ACTIVE PROTOCOLS" in glitch-text format.
+- **Loading:** Rotating hex-grid loader, "INITIALIZING NEURAL LINK..." text.
+- **Error:** Red overlay, screen shake animation, "CRITICAL SYSTEM FAILURE".
+
+**Components:**
+- **Agent Card:** `h: 64px`, `bg: rgba(10,15,25,0.8)`, `border: 1px solid #4A5578`.
+- **Status Badge:** `w: 12px`, `h: 12px`, `border-radius: 50%`. Cyan = active, Purple = training, Red = error.
+
+**Interactions:**
+- **Hover Agent Card:** `bg: rgba(0, 240, 255, 0.1)`, cursor changes to crosshair.
+- **Click Alert:** Auto-scrolls and highlights corresponding agent node in Spatial View.
+
+**Responsive:**
+- **Desktop:** Full 3-column fluid grid.
+- **Tablet:** Collapse Right column into slide-out drawer.
+- **Mobile:** Not supported. Display "ACCESS DENIED: INSUFFICIENT RESOLUTION".
+
+### Agent Telemetry
+
+**Purpose:** Deep-dive diagnostics for a single AGI unit.
+
+**Layout:** 2x2 grid of data panels. Top Left: Identity & Status. Top Right: Neural load graph. Bottom Left: Memory block visualizer. Bottom Right: Live task queue.
+
+**Key Elements:**
+- **Neural Load Graph:** Real-time multi-line chart (Cyan, Purple). X-axis: Time (-60s to now).
+- **Memory Block Matrix:** 16x16 grid of small squares. Brightness indicates memory allocation.
+- **Kill Switch:** `bg: #FF003C`, `clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%)`.
+- **Task List:** Monospace table, columns: `ID | TASK_HASH | STATUS | CYCLES`.
+
+**States:**
+- **Empty:** Memory block shows all empty (muted steel blue).
+- **Loading:** Graph draws skeleton sine-waves before data connects.
+- **Error:** "CONNECTION LOST. ATTEMPTING RECONNECT..." blinking red text.
+
+**Components:**
+- **Metric Box:** Large glowing number `48px`, sub-label `12px uppercase`.
+- **Progress Bar:** Segmented blocks, not a continuous fill. 10 blocks total.
+
+**Interactions:**
+- **Hover Kill Switch:** Aggressive red pulse animation (`box-shadow`), button text changes from "HALT" to "CONFIRM DESTRUCTION".
+- **Click Task Row:** Expands row to show detailed JSON payload output.
+
+### Command Terminal
+
+**Purpose:** Full-screen manual override and script execution.
+
+**Layout:** Single full-screen panel. 90% height log output, 10% height input bar.
+
+**Key Elements:**
+- **Console Output:** Monospace log text. `color: #E0E5FF`. Timestamp prefixes `[00:45:12]`.
+- **Command Input:** Large text field, 24px font size. No borders, just a bright cyan bottom line.
+- **Syntax Highlighting:** Commands in Cyan, Arguments in Purple, Strings in Orange.
+- **System Overlay:** Top right corner showing raw CPU/RAM numbers, updating 10x/second.
+
+**States:**
+- **Empty:** Blinking block cursor. Header block showing system ASCII art.
+- **Loading:** Output text typing animation (`10ms` per character).
+- **Error:** Red output text, `> ERROR: ROOT PRIVILEGES REQUIRED`.
+
+**Components:**
+- **Log Entry:** `display: flex`, `<Timestamp> <Module> <Message>`.
+- **Scrollbar:** Custom styling. `width: 4px`, `bg: #00F0FF`.
+
+**Interactions:**
+- **Up/Down Arrow:** Cycles through local command history.
+- **Type 'clear':** Flashes screen white `opacity: 0.1` for 50ms, clears all logs.
+
+### Analytics Matrix
+
+**Purpose:** Fleet-wide performance visualization.
+
+**Layout:** Masonry grid of charts and widgets.
+
+**Key Elements:**
+- **Global Efficiency Radar:** Hexagonal radar chart comparing 6 core metrics across the fleet.
+- **Throughput Heatmap:** Weekly/Daily grid showing peak processing times.
+- **Error Rate Sparklines:** Mini line-charts attached to a data table of all agents.
+- **Filter Bar:** Top row of segmented controls to filter by Agent Type, Region, Version.
+
+**States:**
+- **Empty:** "NO DATA ACCUMULATED".
+- **Loading:** Sweeping laser line animation over the grid.
+- **Error:** Charts fall back to "DATA CORRUPTED" diagonal stripe patterns.
+
+**Components:**
+- **Radar Chart:** `stroke: #B026FF`, `fill: rgba(176, 38, 255, 0.2)`.
+- **Filter Chip:** `border: 1px solid #00F0FF`, text color `#00F0FF`. Active state: `bg: #00F0FF`, text `#05050A`.
+
+**Interactions:**
+- **Hover Data Point:** Crosshair tooltip snaps to nearest point, displaying exact value with neon backdrop blur.
+- **Click Filter:** Grid items shuffle via spring physics animation.
+
+</details>
+
+---
+
+<details>
+<summary>Build Guide</summary>
+
+**Stack:** HTML + Tailwind CSS v3 + Three.js (for spatial view) + Recharts (for graphs)
+
+**Build Order:**
+1. **Design System & Layout:** Setup CSS variables, custom fonts, global reset, and the Holy Grail layout for Main Dashboard. Establishes the dark glassmorphic baseline.
+2. **Main Dashboard (UI):** Build Agent Roster, Alert Feed, and Quick Terminal. Focus on getting the neon borders and glows exact.
+3. **Command Terminal:** Build the full-screen layout. Implement the JetBrains Mono log styling and input field mechanics.
+4. **Agent Telemetry:** Implement grid layout, metric boxes, and the segmented progress bars.
+5. **Analytics Matrix:** Integrate charting library, apply custom stroke/fill colors to match the neon cyberpunk palette.
+6. **Main Dashboard (3D):** Drop in the Three.js canvas for the central spatial view. Wire up the rotating node animation.
+
+</details>

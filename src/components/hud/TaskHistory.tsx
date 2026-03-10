@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useMemo } from "react";
-import { Search, X, CheckCircle, XCircle, Clock, Loader2, Trash2, Download, ChevronRight } from "lucide-react";
+import { Search, X, CheckCircle, XCircle, Clock, Loader2, Trash2, Download, ChevronRight, TerminalSquare } from "lucide-react";
 import { useStudio } from "@/lib/store";
 import type { TaskItem } from "@/types/game";
 
@@ -12,12 +12,12 @@ interface TaskHistoryProps {
 
 const STATUS_CONFIG: Record<string, { icon: typeof CheckCircle; color: string; bg: string; animate?: boolean }> = {
   submitted: { icon: Clock, color: "text-slate-400", bg: "bg-slate-500/20" },
-  queued: { icon: Clock, color: "text-blue-400", bg: "bg-blue-500/20" },
+  queued: { icon: Clock, color: "text-cyan-400", bg: "bg-cyan-500/20" },
   running: { icon: Loader2, color: "text-yellow-400", bg: "bg-yellow-500/20", animate: true },
   completed: { icon: CheckCircle, color: "text-green-400", bg: "bg-green-500/20" },
   failed: { icon: XCircle, color: "text-red-400", bg: "bg-red-500/20" },
   stopped: { icon: XCircle, color: "text-orange-400", bg: "bg-orange-500/20" },
-  returning: { icon: Loader2, color: "text-purple-400", bg: "bg-purple-500/20", animate: true },
+  returning: { icon: Loader2, color: "text-fuchsia-400", bg: "bg-fuchsia-500/20", animate: true },
 };
 
 export default function TaskHistory({ isOpen, onClose }: TaskHistoryProps) {
@@ -59,96 +59,106 @@ export default function TaskHistory({ isOpen, onClose }: TaskHistoryProps) {
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-black/60 backdrop-blur-sm">
-      <div className="w-full max-w-2xl mx-4 bg-slate-900 border-2 border-slate-700 rounded-lg shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-[90] flex items-center justify-center bg-[#02050a]/90 backdrop-blur-sm">
+      <div className="w-full max-w-2xl mx-4 bg-[#050a15] border-2 border-cyan-500 shadow-[0_0_30px_rgba(0,240,255,0.2)] flex flex-col relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(0,240,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,240,255,0.03)_1px,transparent_1px)] bg-[size:10px_10px]" />
+
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700 bg-slate-800">
-          <h2 className="text-sm font-bold text-white" style={{ fontFamily: '"Ark Pixel", monospace' }}>
-            Task History ({state.tasks.length})
+        <div className="relative flex items-center justify-between px-4 py-3 border-b-2 border-cyan-500/50 bg-[#0a0f1c]">
+          <div className="absolute top-0 left-0 w-2 h-2 border-r border-b border-cyan-400" />
+          <h2 className="text-[12px] font-black text-white uppercase tracking-[0.2em] flex items-center gap-2">
+            <TerminalSquare size={14} className="text-cyan-400" />
+            Operations Log <span className="text-cyan-500">[{state.tasks.length}]</span>
           </h2>
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 z-10">
             <button
               onClick={handleExport}
-              className="p-2 text-slate-400 hover:text-white transition-colors"
-              title="Export Tasks"
+              className="p-1.5 border border-cyan-500/30 text-cyan-400 hover:bg-cyan-500 hover:text-black transition-colors"
+              title="EXPORT LOGS"
             >
-              <Download size={16} />
+              <Download size={14} />
             </button>
             <button
               onClick={onClose}
-              className="p-1 text-slate-400 hover:text-white transition-colors"
+              title="Close Operations Log"
+              className="p-1.5 border border-red-500/30 text-red-500 hover:bg-red-500 hover:text-black transition-colors"
             >
-              <X size={18} />
+              <X size={14} />
             </button>
           </div>
         </div>
 
         {/* Filters */}
-        <div className="p-3 border-b border-slate-700 flex gap-2">
+        <div className="p-3 border-b border-cyan-500/30 bg-[#02050a] flex gap-2 relative z-10">
           {/* Search */}
           <div className="relative flex-1">
-            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+            <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-cyan-500" />
             <input
               type="text"
               value={search}
               onChange={(e) => setSearch(e.target.value)}
-              placeholder="Search tasks..."
-              className="w-full pl-8 pr-3 py-2 bg-slate-800 border border-slate-700 rounded text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-purple-500"
-              style={{ fontFamily: '"Ark Pixel", monospace' }}
+              placeholder="QUERY LOGS..."
+              className="pixel-input w-full pl-7 text-[10px]"
             />
           </div>
 
           {/* Status filter */}
-          <select
-            value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value)}
-            className="px-3 py-2 bg-slate-800 border border-slate-700 rounded text-xs text-white focus:outline-none focus:border-purple-500"
-            style={{ fontFamily: '"Ark Pixel", monospace' }}
-          >
-            <option value="all">All Status</option>
-            <option value="running">Running</option>
-            <option value="completed">Completed</option>
-            <option value="failed">Failed</option>
-            <option value="queued">Queued</option>
-          </select>
+          <div className="relative">
+            <select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              title="Filter by status"
+              className="pixel-input pr-8 appearance-none text-[10px]"
+            >
+              <option value="all">ALL STATUSES</option>
+              <option value="running">RUNNING</option>
+              <option value="completed">COMPLETED</option>
+              <option value="failed">FAILED</option>
+              <option value="queued">QUEUED</option>
+            </select>
+            <div className="absolute right-2 top-1/2 -translate-y-1/2 pointer-events-none text-cyan-500">
+              ▼
+            </div>
+          </div>
         </div>
 
         {/* Task list */}
-        <div className="max-h-80 overflow-y-auto">
+        <div className="max-h-80 overflow-y-auto custom-scrollbar relative z-10">
           {filteredTasks.length === 0 ? (
-            <div className="p-8 text-center text-slate-500 text-xs" style={{ fontFamily: '"Ark Pixel", monospace' }}>
-              No tasks found
+            <div className="p-8 text-center text-[10px] font-bold tracking-widest text-cyan-900 border-2 border-dashed border-cyan-900/50 m-4">
+              NO OPERATIONS FOUND IN REGISTRY
             </div>
           ) : (
             filteredTasks.map((task) => {
-              const config = STATUS_CONFIG[task.status];
+              const config = STATUS_CONFIG[task.status] || STATUS_CONFIG.submitted;
               const Icon = config.icon;
 
               return (
                 <div
                   key={task.taskId}
                   onClick={() => setSelectedTask(task)}
-                  className="flex items-center gap-3 px-4 py-3 border-b border-slate-800 hover:bg-slate-800/50 cursor-pointer transition-colors"
+                  className="flex items-center gap-3 px-4 py-3 border-b border-cyan-900/50 bg-[#050a15] hover:bg-cyan-900/20 cursor-pointer transition-colors group"
                 >
                   {/* Status icon */}
-                  <div className={`p-2 rounded ${config.bg}`}>
-                    <Icon className={`w-4 h-4 ${config.color} ${config.animate ? "animate-spin" : ""}`} />
+                  <div className={`p-1.5 border border-cyan-500/20 ${config.bg}`}>
+                    <Icon className={`w-3.5 h-3.5 ${config.color} ${config.animate ? "animate-pulse" : ""}`} />
                   </div>
 
                   {/* Task info */}
                   <div className="flex-1 min-w-0">
-                    <div className="text-xs text-white truncate" style={{ fontFamily: '"Ark Pixel", monospace' }}>
+                    <div className="text-[10px] font-bold text-white truncate uppercase tracking-widest group-hover:text-cyan-400 transition-colors">
                       {task.message}
                     </div>
-                    <div className="text-xs text-slate-500 flex items-center gap-2 mt-1">
+                    <div className="text-[8px] font-bold text-slate-500 flex items-center gap-3 mt-1 tracking-widest uppercase">
+                      <span className="text-cyan-700">{task.taskId.substring(0, 8)}</span>
                       {task.actorName && (
-                        <span className="text-purple-400">{task.actorName}</span>
+                        <span className="text-fuchsia-400">@{task.actorName}</span>
                       )}
                       <span>{new Date(task.createdAt).toLocaleTimeString()}</span>
                     </div>
                   </div>
 
-                  <ChevronRight className="w-4 h-4 text-slate-500" />
+                  <ChevronRight className="w-4 h-4 text-cyan-900 group-hover:text-cyan-400" />
                 </div>
               );
             })
@@ -157,76 +167,76 @@ export default function TaskHistory({ isOpen, onClose }: TaskHistoryProps) {
 
         {/* Task detail modal */}
         {selectedTask && (
-          <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
-            <div className="w-full max-w-md mx-4 bg-slate-800 border border-slate-700 rounded-lg shadow-xl overflow-hidden">
-              <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700">
-                <h3 className="text-sm font-bold text-white" style={{ fontFamily: '"Ark Pixel", monospace' }}>
-                  Task Details
+          <div className="absolute inset-0 bg-[#02050a]/90 backdrop-blur-sm flex items-center justify-center z-50">
+            <div className="w-full max-w-md mx-4 bg-[#050a15] border border-cyan-400 shadow-[0_0_20px_rgba(0,240,255,0.3)] flex flex-col">
+              <div className="flex items-center justify-between px-3 py-2 border-b border-cyan-400 bg-cyan-950/30">
+                <h3 className="text-[10px] font-black text-cyan-400 uppercase tracking-widest flex items-center gap-2">
+                  <div className="w-1.5 h-1.5 bg-cyan-400 animate-pulse" />
+                  OPERATION DETAILS
                 </h3>
                 <button
                   onClick={() => setSelectedTask(null)}
-                  className="p-1 text-slate-400 hover:text-white transition-colors"
+                  title="Close details"
+                  className="p-1 text-cyan-500 hover:text-white hover:bg-red-500 transition-colors"
                 >
-                  <X size={16} />
+                  <X size={12} strokeWidth={3} />
                 </button>
               </div>
 
-              <div className="p-4 space-y-3">
-                <div>
-                  <label className="text-xs text-slate-500">Task ID</label>
-                  <div className="text-xs text-white font-mono">{selectedTask.taskId}</div>
-                </div>
-
-                <div>
-                  <label className="text-xs text-slate-500">Message</label>
-                  <div className="text-xs text-white">{selectedTask.message}</div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
+              <div className="p-4 space-y-4">
+                <div className="grid grid-cols-2 gap-4 border-b border-cyan-900 pb-3">
                   <div>
-                    <label className="text-xs text-slate-500">Status</label>
-                    <div className={`text-xs ${STATUS_CONFIG[selectedTask.status]?.color || "text-white"}`}>
+                    <label className="text-[8px] font-black text-cyan-700 uppercase tracking-widest block mb-1">Status</label>
+                    <div className={`text-[10px] font-bold uppercase tracking-widest px-1.5 py-0.5 inline-block border ${STATUS_CONFIG[selectedTask.status]?.color?.replace('text-', 'border-').replace('400', '500/50')} ${STATUS_CONFIG[selectedTask.status]?.color || "text-white"}`}>
                       {selectedTask.status}
                     </div>
                   </div>
                   <div>
-                    <label className="text-xs text-slate-500">Actor</label>
-                    <div className="text-xs text-purple-400">{selectedTask.actorName || "Unassigned"}</div>
+                    <label className="text-[8px] font-black text-cyan-700 uppercase tracking-widest block mb-1">Actor Designation</label>
+                    <div className="text-[10px] font-bold text-fuchsia-400 uppercase tracking-widest">{selectedTask.actorName || "SYSTEM ORCHESTRATOR"}</div>
+                  </div>
+                </div>
+
+                <div>
+                  <label className="text-[8px] font-black text-cyan-700 uppercase tracking-widest block mb-1">Objective</label>
+                  <div className="text-[10px] text-white leading-relaxed p-2 border border-cyan-900 bg-[#02050a]">
+                    {selectedTask.message}
                   </div>
                 </div>
 
                 {selectedTask.result && (
                   <div>
-                    <label className="text-xs text-slate-500">Result</label>
-                    <div className="text-xs text-white bg-slate-900 p-2 rounded max-h-32 overflow-y-auto">
+                    <label className="text-[8px] font-black text-cyan-700 uppercase tracking-widest block mb-1">Execution Output</label>
+                    <div className="text-[9px] text-cyan-300 font-mono bg-black border border-cyan-900 p-2 max-h-32 overflow-y-auto custom-scrollbar leading-relaxed">
                       {selectedTask.result}
                     </div>
                   </div>
                 )}
 
-                <div className="grid grid-cols-2 gap-3">
+                <div className="grid grid-cols-2 gap-4 text-[8px] font-bold uppercase tracking-widest">
                   <div>
-                    <label className="text-xs text-slate-500">Created</label>
-                    <div className="text-xs text-white">{new Date(selectedTask.createdAt).toLocaleString()}</div>
+                    <span className="text-cyan-700 block">INITIATED</span>
+                    <span className="text-slate-400">{new Date(selectedTask.createdAt).toLocaleString()}</span>
                   </div>
                   {selectedTask.completedAt && (
                     <div>
-                      <label className="text-xs text-slate-500">Completed</label>
-                      <div className="text-xs text-white">{new Date(selectedTask.completedAt).toLocaleString()}</div>
+                      <span className="text-cyan-700 block">CONCLUDED</span>
+                      <span className="text-slate-400">{new Date(selectedTask.completedAt).toLocaleString()}</span>
                     </div>
                   )}
                 </div>
 
-                <button
-                  onClick={() => {
-                    handleDelete(selectedTask.taskId);
-                    setSelectedTask(null);
-                  }}
-                  className="w-full flex items-center justify-center gap-2 px-3 py-2 bg-red-500/20 border border-red-500/50 text-red-400 rounded hover:bg-red-500/30 transition-colors"
-                >
-                  <Trash2 size={14} />
-                  <span className="text-xs" style={{ fontFamily: '"Ark Pixel", monospace' }}>Delete Task</span>
-                </button>
+                <div className="pt-2">
+                  <button
+                    onClick={() => {
+                      handleDelete(selectedTask.taskId);
+                      setSelectedTask(null);
+                    }}
+                    className="w-full py-2 bg-red-500/10 border border-red-500 text-red-500 text-[9px] font-black uppercase tracking-widest hover:bg-red-500 hover:text-white transition-colors flex items-center justify-center gap-2"
+                  >
+                    <Trash2 size={12} /> PURGE LOG ENTRY
+                  </button>
+                </div>
               </div>
             </div>
           </div>

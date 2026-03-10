@@ -1,62 +1,42 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireApiAuth } from "@/lib/api-auth";
+import {
+  countSessions,
+  createSession,
+  deleteSession,
+  getSession,
+  listSessions,
+} from "@/lib/server-store";
 
-// In-memory session store (in production, use a database)
-const sessionStore = new Map<string, SessionRecord>();
-
-interface SessionRecord {
-  key: string;
-  label?: string;
-  createdAt: string;
-  updatedAt: string;
-  messageCount: number;
-  taskCount: number;
-}
-
-function generateSessionKey(): string {
-  return `agent:main:${Date.now()}_${Math.random().toString(36).substring(2, 7)}`;
-}
-
-// Initialize default session
-sessionStore.set("agent:main:main", {
-  key: "agent:main:main",
-  label: "Main Session",
-  createdAt: new Date().toISOString(),
-  updatedAt: new Date().toISOString(),
-  messageCount: 0,
-  taskCount: 0,
-});
+export const runtime = "nodejs";
 
 // GET - List all sessions
 export async function GET(request: NextRequest) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
+
   const searchParams = request.nextUrl.searchParams;
   const limit = parseInt(searchParams.get("limit") || "20");
-
-  const sessions = Array.from(sessionStore.values())
-    .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime())
-    .slice(0, limit);
+  const [sessions, total] = await Promise.all([
+    listSessions(limit),
+    countSessions(),
+  ]);
 
   return NextResponse.json({
     sessions,
-    total: sessionStore.size,
+    total,
   });
 }
 
 // POST - Create a new session
 export async function POST(request: NextRequest) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const { label } = body;
-
-    const session: SessionRecord = {
-      key: generateSessionKey(),
-      label: label || `Session ${sessionStore.size + 1}`,
-      createdAt: new Date().toISOString(),
-      updatedAt: new Date().toISOString(),
-      messageCount: 0,
-      taskCount: 0,
-    };
-
-    sessionStore.set(session.key, session);
+    const session = await createSession(typeof label === "string" ? label : undefined);
 
     return NextResponse.json({
       success: true,
@@ -73,6 +53,9 @@ export async function POST(request: NextRequest) {
 
 // DELETE - Remove a session
 export async function DELETE(request: NextRequest) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
+
   const searchParams = request.nextUrl.searchParams;
   const sessionKey = searchParams.get("sessionKey");
 
@@ -91,14 +74,15 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
-  if (!sessionStore.has(sessionKey)) {
+  const session = await getSession(sessionKey);
+  if (!session) {
     return NextResponse.json(
       { error: `Session ${sessionKey} not found` },
       { status: 404 }
     );
   }
 
-  sessionStore.delete(sessionKey);
+  await deleteSession(sessionKey);
 
   return NextResponse.json({
     success: true,

@@ -1,3 +1,5 @@
+import type { SeatDef } from "@/components/game/utils/MapHelpers";
+
 // ─────────────────────────────────────────────────────────────────────────
 // Studio Domain Types - Complete TypeScript definitions
 // ─────────────────────────────────────────────────────────────────────────
@@ -48,6 +50,10 @@ export interface SeatState {
   roleTitle?: string;
   /** Whether a worker is assigned to this seat */
   assigned?: boolean;
+  /** Unique registry agent identity for this seat */
+  agentId?: string;
+  /** Preferred OpenClaw workspace identity for NiagaBot delegation */
+  openclawId?: string;
   /** Sprite key for the worker */
   spriteKey?: string;
   /** Path to sprite image */
@@ -85,8 +91,14 @@ export interface TaskItem {
   seatId?: string;
   /** Session key for grouping */
   sessionKey: string;
+  /** Actual NiagaBot entry session used for the request, when different from the UI grouping session key */
+  gatewaySessionKey?: string;
   /** Actor name (worker) handling this task */
   actorName?: string;
+  /** Unique registry agent identity */
+  agentId?: string;
+  /** Preferred OpenClaw workspace identity requested for delegation */
+  openclawId?: string;
   /** Result/completion message */
   result?: string;
   /** When task was created */
@@ -155,6 +167,8 @@ export interface GatewayConfig {
   url: string;
   /** Authentication token */
   token: string;
+  /** Whether reconnecting requires a fresh runtime token from the operator */
+  requiresToken?: boolean;
 }
 
 // ─────────────────────────────────────────────────────────────────────────
@@ -261,22 +275,44 @@ export interface POI {
 // ─────────────────────────────────────────────────────────────────────────
 
 export interface GameEventMap {
-  "seats-discovered": SeatState[];
-  "seat-configs-updated": SeatState[];
+  "seats-discovered": [seats: SeatDef[]];
+  "seat-configs-updated": [seats: SeatState[]];
   "task-assigned": [taskId: string, message: string, seatId?: string];
   "task-ready": [taskId: string, message: string, seatId?: string];
   "task-routed": [taskId: string, seatId: string, actorName: string];
-  "task-staged": [taskId: string, stage: string, seatId?: string];
+  "task-staged": [taskId: string, stage: "queued" | "returning", seatId?: string];
   "task-bound": [taskId: string, runId: string];
   "task-bubble": [runId: string, text: string, ttl?: number];
-  "task-completed": string;
-  "task-failed": string;
-  "task-aborted": string;
-  "stop-task": [runId: string, seatId?: string];
+  "task-completed": [runId: string];
+  "task-failed": [runId: string];
+  "task-aborted": [runId: string];
+  "stop-task": [runId: string, seatId: string];
   "subagent-assigned": [runId: string, parentRunId: string, label: string];
   "open-terminal": [seatId?: string];
   "open-terminal-queue": [seatId: string];
-  "terminal-closed": void;
+  "terminal-closed": [];
+}
+
+export type PipelineStage =
+  | "submitted"
+  | "received"
+  | "routing"
+  | "delegated"
+  | "processing"
+  | "completed"
+  | "failed";
+
+export interface PipelineStageState {
+  timestamp?: number;
+  detail?: string;
+}
+
+export interface TaskPipelineState {
+  taskId: string;
+  currentStage: PipelineStage;
+  stages: Partial<Record<PipelineStage, PipelineStageState>>;
+  delegatedTo?: string;
+  elapsed?: number;
 }
 
 // ─────────────────────────────────────────────────────────────────────────

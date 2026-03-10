@@ -1,0 +1,7 @@
+
+> openproject-1@0.2.0 typecheck
+> tsc --noEmit
+
+vitest.config.ts(2,1): error TS1185: Merge conflict marker encountered.
+vitest.config.ts(29,1): error TS1185: Merge conflict marker encountered.
+vitest.config.ts(51,1): error TS1185: Merge conflict marker encountered.

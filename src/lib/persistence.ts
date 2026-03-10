@@ -29,8 +29,15 @@ export interface PersistedSeatConfig {
   label?: string;
   roleTitle?: string;
   assigned?: boolean;
+  agentId?: string;
+  openclawId?: string;
   spriteKey?: string;
   spritePath?: string;
+}
+
+interface StoredGatewayConfig {
+  url?: string;
+  requiresToken?: boolean;
 }
 
 // ── Generic helpers ────────────────────────────────────
@@ -56,11 +63,20 @@ export function lsSet(key: string, value: unknown) {
 // ── Domain-specific loaders ────────────────────────────
 
 export function loadGatewayConfig(): GatewayConfig | null {
-  return lsGet<GatewayConfig | null>(LS_CONFIG, null);
+  const stored = lsGet<StoredGatewayConfig | null>(LS_CONFIG, null);
+  if (!stored?.url) return null;
+  return {
+    url: stored.url,
+    token: "",
+    requiresToken: stored.requiresToken ?? false,
+  };
 }
 
 export function saveGatewayConfig(config: GatewayConfig) {
-  lsSet(LS_CONFIG, config);
+  lsSet(LS_CONFIG, {
+    url: config.url,
+    requiresToken: Boolean(config.token.trim()),
+  } satisfies StoredGatewayConfig);
 }
 
 export function loadActiveSessionKey(): string | null {

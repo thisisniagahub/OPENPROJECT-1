@@ -3,10 +3,13 @@ import { Player } from "../entities/Player";
 import { Worker, resetWanderClock, type POI } from "../entities/Worker";
 import { InteractionMenu, type MenuOption } from "../entities/InteractionMenu";
 import {
+  OPERATIVE_CHANGED_EVENT,
   SPRITE_KEY,
   SPRITE_PATH,
   FRAME_HEIGHT,
   WORKER_SPRITES,
+  getCharacterConfig,
+  getSelectedCharacter,
   type Direction,
 } from "../config/animations";
 import {
@@ -41,6 +44,10 @@ import {
 } from "@/lib/constants";
 import type { SeatState } from "@/types/game";
 
+const UNIQUE_WORKER_TEXTURES = Array.from(
+  new Map(WORKER_SPRITES.map((sprite) => [sprite.key, sprite.path])).entries(),
+);
+
 export class OfficeScene extends Phaser.Scene {
   private player!: Player;
   private terminalZone: { x: number; y: number } | null = null;
@@ -61,6 +68,7 @@ export class OfficeScene extends Phaser.Scene {
   private nearestWorker: Worker | null = null;
   private workerPromptText: Phaser.GameObjects.Text | null = null;
   private menuOpen = false;
+  private operativeChangedHandler: ((event: Event) => void) | null = null;
 
   constructor() {
     super({ key: "OfficeScene" });
@@ -80,8 +88,8 @@ export class OfficeScene extends Phaser.Scene {
 
     this.load.image(SPRITE_KEY, SPRITE_PATH);
 
-    for (const ws of WORKER_SPRITES) {
-      this.load.image(ws.key, ws.path);
+    for (const [textureKey, texturePath] of UNIQUE_WORKER_TEXTURES) {
+      this.load.image(textureKey, texturePath);
     }
 
     this.load.spritesheet(EMOTE_SHEET_KEY, EMOTE_SHEET_PATH, {
@@ -97,8 +105,8 @@ export class OfficeScene extends Phaser.Scene {
 
   create() {
     buildSpriteFrames(this, SPRITE_KEY);
-    for (const ws of WORKER_SPRITES) {
-      buildSpriteFrames(this, ws.key);
+    for (const [textureKey] of UNIQUE_WORKER_TEXTURES) {
+      buildSpriteFrames(this, textureKey);
     }
 
     const map = this.make.tilemap({ key: "office" });
@@ -133,7 +141,9 @@ export class OfficeScene extends Phaser.Scene {
     const { bossSpawn, workerSpawns } = parseSpawns(map);
     this.seatDefs = workerSpawns;
 
-    this.player = new Player(this, bossSpawn.x, bossSpawn.y);
+    const selectedOperative = getCharacterConfig(getSelectedCharacter());
+    const playerSpriteKey = selectedOperative?.key ?? SPRITE_KEY;
+    this.player = new Player(this, bossSpawn.x, bossSpawn.y, playerSpriteKey);
     this.physics.add.collider(this.player.sprite, this.collisionGroup);
 
     this.physics.world.setBounds(0, 0, map.widthInPixels, map.heightInPixels);
@@ -161,6 +171,7 @@ export class OfficeScene extends Phaser.Scene {
     this.initBossSeat(bossSpawn);
     this.initInteractionUI();
     this.initGameEvents();
+    this.initOperativeSelectionBridge();
     gameEvents.emit("seats-discovered", workerSpawns);
 
     this.events.once(Phaser.Scenes.Events.SHUTDOWN, () => this.cleanup());
@@ -456,6 +467,22 @@ export class OfficeScene extends Phaser.Scene {
     }));
   }
 
+  private initOperativeSelectionBridge() {
+    if (typeof window === "undefined") return;
+
+    this.operativeChangedHandler = (event: Event) => {
+      const detail = (event as CustomEvent<{ agentId?: string }>).detail;
+      if (!detail?.agentId) return;
+      const selectedOperative = getCharacterConfig(detail.agentId);
+      this.player.setSpriteKey(selectedOperative?.key ?? SPRITE_KEY);
+    };
+
+    window.addEventListener(
+      OPERATIVE_CHANGED_EVENT,
+      this.operativeChangedHandler as EventListener,
+    );
+  }
+
   private cleanup() {
     for (const unsub of this.gameEventUnsubs) unsub();
     this.gameEventUnsubs = [];
@@ -464,6 +491,13 @@ export class OfficeScene extends Phaser.Scene {
     this.workers = [];
     this.runWorkerMap.clear();
     this.nearestWorker = null;
+    if (typeof window !== "undefined" && this.operativeChangedHandler) {
+      window.removeEventListener(
+        OPERATIVE_CHANGED_EVENT,
+        this.operativeChangedHandler as EventListener,
+      );
+      this.operativeChangedHandler = null;
+    }
 
     this.interactionMenu?.destroy();
   }

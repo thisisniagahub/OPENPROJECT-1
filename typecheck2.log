@@ -1,0 +1,17 @@
+
+> openproject-1@0.2.0 typecheck
+> tsc --noEmit
+
+src/components/hud/NotificationCenter.tsx(68,11): error TS2552: Cannot find name 'BrowserNotification'. Did you mean 'setNotifications'?
+src/lib/reducer.test.ts(34,30): error TS2345: Argument of type '{ id: string; runId: string; status: string; }[]' is not assignable to parameter of type 'TaskItem[]'.
+  Type '{ id: string; runId: string; status: string; }' is missing the following properties from type 'TaskItem': taskId, message, sessionKey, createdAt
+src/lib/reducer.test.ts(36,21): error TS2339: Property 'id' does not exist on type 'TaskItem'.
+src/lib/reducer.test.ts(43,30): error TS2345: Argument of type '{ id: string; runId: string; status: string; }[]' is not assignable to parameter of type 'TaskItem[]'.
+  Type '{ id: string; runId: string; status: string; }' is missing the following properties from type 'TaskItem': taskId, message, sessionKey, createdAt
+src/lib/southpark-characters.test.ts(10,8): error TS2307: Cannot find module '../lib/southpark-characters' or its corresponding type declarations.
+src/lib/southpark-characters.test.ts(19,38): error TS7006: Parameter 'character' implicitly has an 'any' type.
+src/lib/southpark-characters.test.ts(34,46): error TS7006: Parameter 'c' implicitly has an 'any' type.
+src/lib/southpark-characters.test.ts(43,38): error TS7006: Parameter 'character' implicitly has an 'any' type.
+src/lib/southpark-characters.test.ts(49,38): error TS7006: Parameter 'character' implicitly has an 'any' type.
+src/lib/southpark-characters.test.ts(55,38): error TS7006: Parameter 'character' implicitly has an 'any' type.
+src/lib/southpark-characters.test.ts(61,38): error TS7006: Parameter 'character' implicitly has an 'any' type.

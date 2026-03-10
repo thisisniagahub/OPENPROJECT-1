@@ -5,20 +5,18 @@
 
 import { gameEvents } from "./events";
 import type { GatewayClient } from "./gateway";
-import type { GatewayFrame } from "./gateway-types";
-import type { ChatMessage, TaskItem, SessionMetrics } from "@/types/game";
+import type {
+  GatewayFrame,
+  ModelChoice,
+  ModelsListPayload,
+} from "./gateway-types";
+import type { ChatMessage, SeatState, TaskItem, SessionMetrics } from "@/types/game";
 import { chatId, findTask, MAIN_SESSION_KEY } from "./reducer";
 import { isDebugEnabled } from "./env";
 
 // ── Types ─────────────────────────────────────────────────────────────
 
-export interface ModelChoice {
-  id: string;
-  provider: string;
-  contextWindow?: number;
-}
-
-export interface AgentEventPayload {
+interface GatewayAgentStreamPayload {
   runId: string;
   sessionId?: string;
   type: "start" | "delta" | "tool_start" | "tool_delta" | "tool_end" | "end" | "error";
@@ -37,7 +35,7 @@ export interface AgentEventPayload {
   provider?: string;
 }
 
-export interface ChatEventPayload {
+interface GatewayChatStreamPayload {
   runId: string;
   role: "user" | "assistant" | "system" | "tool";
   content: string;
@@ -47,7 +45,7 @@ export interface ChatEventPayload {
   timestamp?: string;
 }
 
-export interface SessionEventPayload {
+interface GatewaySessionMetricsPayload {
   sessionKey: string;
   metrics?: SessionMetrics;
 }
@@ -55,7 +53,7 @@ export interface SessionEventPayload {
 export interface HandlerRefs {
   dispatch: () => (action: unknown) => void;
   tasks: () => TaskItem[];
-  seats: () => unknown[];
+  seats: () => SeatState[];
   activeSessionKey: () => string | undefined;
   setActiveSessionKey: (key?: string) => void;
   seenStarts: Set<string>;
@@ -69,13 +67,13 @@ export interface HandlerRefs {
 
 // ── Type Guards ────────────────────────────────────────────────────────
 
-function isAgentEventPayload(payload: unknown): payload is AgentEventPayload {
+function isAgentEventPayload(payload: unknown): payload is GatewayAgentStreamPayload {
   if (typeof payload !== "object" || payload === null) return false;
   const p = payload as Record<string, unknown>;
   return typeof p["runId"] === "string" && typeof p["type"] === "string";
 }
 
-function isChatEventPayload(payload: unknown): payload is ChatEventPayload {
+function isChatEventPayload(payload: unknown): payload is GatewayChatStreamPayload {
   if (typeof payload !== "object" || payload === null) return false;
   const p = payload as Record<string, unknown>;
   return typeof p["runId"] === "string" && 
@@ -83,7 +81,7 @@ function isChatEventPayload(payload: unknown): payload is ChatEventPayload {
          typeof p["content"] === "string";
 }
 
-function isSessionEventPayload(payload: unknown): payload is SessionEventPayload {
+function isSessionEventPayload(payload: unknown): payload is GatewaySessionMetricsPayload {
   if (typeof payload !== "object" || payload === null) return false;
   const p = payload as Record<string, unknown>;
   return typeof p["sessionKey"] === "string";
@@ -146,7 +144,7 @@ export function wireGatewayClient(client: GatewayClient, refs: HandlerRefs) {
     if (status === "connected") {
       // Request model catalog on connect
       client.request("models.list", {}).then((res) => {
-        const payload = res.payload as { models?: ModelChoice[] } | undefined;
+        const payload = res.payload as ModelsListPayload | undefined;
         const models = payload?.models || [];
         refs.modelCatalog.current = models;
         
@@ -496,7 +494,7 @@ export async function getAvailableModels(
 
   try {
     const res = await client.request("models.list", {});
-    const payload = res.payload as { models?: ModelChoice[] } | undefined;
+    const payload = res.payload as ModelsListPayload | undefined;
     return payload?.models || [];
   } catch (err) {
     const error = err as Error;

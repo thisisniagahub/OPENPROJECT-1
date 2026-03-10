@@ -1,6 +1,8 @@
 # 🔍 GAP ANALYSIS REPORT
 ## Agent Town + Pixel Agents Merged Project
 
+> Archival note — this report reflects an earlier merged-project assumption and is no longer the source of truth for March 10, 2026 onward. `OPENPROJECT-1` now operates as a visual/operator console, while specialist OpenClaw workspaces remain external and operator-originated requests enter through NiagaBot/main.
+
 ---
 
 ## 📊 EXECUTIVE SUMMARY

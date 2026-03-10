@@ -1,9 +1,7 @@
 "use client";
 
 import { useMemo } from "react";
-import { Users, Clock, Zap, CheckCircle, XCircle, Circle } from "lucide-react";
 import { useStudio } from "@/lib/store";
-import { formatCompact } from "@/lib/constants";
 
 export default function AgentStatusPanel() {
   const { state } = useStudio();
@@ -15,127 +13,183 @@ export default function AgentStatusPanel() {
     return { working, idle, empty, total: state.seats.length };
   }, [state.seats]);
 
-  const tokenPercent = useMemo(() => {
-    if (!state.sessionMetrics.maxContextTokens) return 0;
-    return Math.min(
-      100,
-      ((state.sessionMetrics.usedTokens || 0) / state.sessionMetrics.maxContextTokens) * 100
-    );
-  }, [state.sessionMetrics]);
+  const recentLogs = useMemo(
+    () =>
+      [...state.tasks]
+        .sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        )
+        .slice(0, 3),
+    [state.tasks],
+  );
 
-  const getTokenColor = () => {
-    if (tokenPercent > 80) return "bg-red-500";
-    if (tokenPercent > 50) return "bg-yellow-500";
-    return "bg-green-500";
-  };
+  const taskCount = state.tasks.length;
+  const alertCount = state.tasks.filter(
+    (t) => t.status === "failed" || t.status === "stopped",
+  ).length;
+
+  /* agent activity bar — 10 pixel blocks */
+  function ActivityBar({ level }: { level: number }) {
+    return (
+      <div className="flex gap-[2px] mt-1">
+        {Array.from({ length: 10 }, (_, i) => (
+          <div
+            key={`ab-${i}`}
+            className="w-[6px] h-[4px]"
+            style={{
+              backgroundColor:
+                i < level ? "#00ff41" : "rgba(0,240,255,0.1)",
+            }}
+          />
+        ))}
+      </div>
+    );
+  }
 
   return (
-    <div className="w-64 bg-slate-900/95 border border-slate-700 rounded-lg overflow-hidden">
-      {/* Header */}
-      <div className="px-3 py-2 bg-slate-800 border-b border-slate-700">
+    <div className="pixel-panel flex h-full flex-col overflow-hidden">
+      {/* ── Header ── */}
+      <div className="flex items-center justify-between px-3 py-2 border-b-2 border-[#00f0ff]/30">
         <div className="flex items-center gap-2">
-          <Users className="w-4 h-4 text-purple-400" />
-          <span className="text-xs font-bold text-white" style={{ fontFamily: '"Ark Pixel", monospace' }}>
-            Agents
+          <span className="text-[10px]">⚡</span>
+          <span className="pixel-font text-[8px] tracking-wider text-[#00f0ff] uppercase">
+            Agent Status
+          </span>
+        </div>
+        <span className="pixel-font text-[6px] px-2 py-0.5 border border-[#00ff41]/50 text-[#00ff41] tracking-wider uppercase">
+          LIVE
+        </span>
+      </div>
+
+      {/* ── Stats Summary ── */}
+      <div className="flex justify-between px-3 py-2 border-b border-[#00f0ff]/20 bg-black/40">
+        <div className="flex items-center gap-1">
+          <span className="text-[8px]">⚡</span>
+          <span className="pixel-font text-[7px] text-[#ffb800]">
+            {stats.working}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-[8px]">✓</span>
+          <span className="pixel-font text-[7px] text-[#00ff41]">
+            {stats.idle}
+          </span>
+        </div>
+        <div className="flex items-center gap-1">
+          <span className="text-[8px]">○</span>
+          <span className="pixel-font text-[7px] text-[#00f0ff]/40">
+            {stats.empty}
           </span>
         </div>
       </div>
 
-      {/* Stats summary */}
-      <div className="px-3 py-2 border-b border-slate-800 flex justify-between">
-        <div className="flex items-center gap-1">
-          <Zap className="w-3 h-3 text-yellow-400" />
-          <span className="text-xs text-yellow-400">{stats.working}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <CheckCircle className="w-3 h-3 text-green-400" />
-          <span className="text-xs text-green-400">{stats.idle}</span>
-        </div>
-        <div className="flex items-center gap-1">
-          <Circle className="w-3 h-3 text-slate-500" />
-          <span className="text-xs text-slate-500">{stats.empty}</span>
-        </div>
-      </div>
-
-      {/* Token usage */}
-      {state.sessionMetrics.usedTokens && (
-        <div className="px-3 py-2 border-b border-slate-800">
-          <div className="flex items-center justify-between mb-1">
-            <span className="text-xs text-slate-400">Tokens</span>
-            <span className="text-xs text-white">
-              {formatCompact(state.sessionMetrics.inputTokens)} / {formatCompact(state.sessionMetrics.outputTokens)}
-            </span>
-          </div>
-          <div className="h-1.5 bg-slate-700 rounded-full overflow-hidden">
-            <div
-              className={`h-full ${getTokenColor()} transition-all duration-300`}
-              style={{ width: `${tokenPercent}%` }}
-            />
-          </div>
-        </div>
-      )}
-
-      {/* Model */}
-      {state.sessionMetrics.model && (
-        <div className="px-3 py-2 border-b border-slate-800">
-          <span className="text-xs text-slate-400">Model: </span>
-          <span className="text-xs text-purple-400">{state.sessionMetrics.model.split("/").pop()}</span>
-        </div>
-      )}
-
-      {/* Agent list */}
-      <div className="max-h-48 overflow-y-auto">
+      {/* ── Agent List ── */}
+      <div className="flex-1 overflow-y-auto px-2 py-2 space-y-2 pixel-scroll bg-black/10">
         {state.seats.length === 0 ? (
-          <div className="p-4 text-center text-xs text-slate-500" style={{ fontFamily: '"Ark Pixel", monospace' }}>
-            No agents assigned
+          <div className="py-6 text-center pixel-font text-[7px] tracking-widest uppercase text-[#00f0ff]/30 border border-dashed border-[#00f0ff]/20 mx-1">
+            NO AGENTS DEPLOYED
           </div>
         ) : (
-          state.seats.map((seat) => (
-            <div
-              key={seat.seatId}
-              className="px-3 py-2 border-b border-slate-800 hover:bg-slate-800/50 transition-colors"
-            >
-              <div className="flex items-center gap-2">
-                {/* Status indicator */}
-                <div
-                  className={`w-2 h-2 rounded-full ${
-                    seat.status === "running"
-                      ? "bg-yellow-400 animate-pulse"
-                      : seat.status === "done"
-                      ? "bg-green-400"
-                      : seat.status === "failed"
-                      ? "bg-red-400"
-                      : seat.assigned
-                      ? "bg-slate-400"
-                      : "bg-slate-700"
-                  }`}
-                />
+          state.seats.map((seat) => {
+            const isRunning = seat.status === "running";
+            const isFailed = seat.status === "failed";
+            const dotColor = isRunning
+              ? "#00ff41"
+              : isFailed
+                ? "#ff3366"
+                : "#ffb800";
+            const statusText = isRunning
+              ? "ONLINE"
+              : isFailed
+                ? "ERROR"
+                : "IDLE";
+            const activityLevel = isRunning
+              ? 8
+              : isFailed
+                ? 2
+                : seat.assigned
+                  ? 5
+                  : 0;
 
-                {/* Name */}
-                <div className="flex-1 min-w-0">
-                  <div className="text-xs text-white truncate" style={{ fontFamily: '"Ark Pixel", monospace' }}>
+            return (
+              <div
+                key={seat.seatId}
+                className="px-2 py-2 bg-black/40 border border-[#00f0ff]/15 hover:border-[#00f0ff]/40 transition-all"
+              >
+                <div className="flex items-center gap-2">
+                  {/* Status dot */}
+                  <div
+                    className="w-[6px] h-[6px] rounded-full flex-shrink-0"
+                    style={{
+                      backgroundColor: dotColor,
+                      boxShadow: isRunning
+                        ? `0 0 6px ${dotColor}`
+                        : "none",
+                    }}
+                  />
+                  {/* Name */}
+                  <span className="pixel-font text-[7px] text-[#e0e0ff] tracking-wider uppercase flex-1 truncate">
                     {seat.label}
-                  </div>
-                  {seat.roleTitle && (
-                    <div className="text-xs text-slate-500 truncate">{seat.roleTitle}</div>
-                  )}
+                  </span>
+                  {/* Status label */}
+                  <span
+                    className="pixel-font text-[6px] tracking-wider uppercase"
+                    style={{ color: dotColor }}
+                  >
+                    {statusText}
+                  </span>
                 </div>
-
-                {/* Task snippet or time */}
-                {seat.status === "running" && seat.taskSnippet ? (
-                  <div className="text-xs text-yellow-400 truncate max-w-[80px]">
-                    {seat.taskSnippet}
-                  </div>
-                ) : seat.startedAt ? (
-                  <div className="flex items-center gap-1 text-xs text-slate-500">
-                    <Clock className="w-3 h-3" />
-                    {Math.floor((Date.now() - new Date(seat.startedAt).getTime()) / 60000)}m
-                  </div>
-                ) : null}
+                <ActivityBar level={activityLevel} />
               </div>
+            );
+          })
+        )}
+      </div>
+
+      {/* ── Task Logs ── */}
+      <div className="px-3 py-2 border-t border-[#00f0ff]/20">
+        <span className="pixel-font text-[7px] tracking-wider text-[#00f0ff]/60 uppercase block mb-1">
+          Task Logs
+        </span>
+        {recentLogs.length === 0 ? (
+          <span className="pixel-font text-[6px] text-[#00f0ff]/30">
+            No tasks yet
+          </span>
+        ) : (
+          recentLogs.map((task) => (
+            <div
+              key={task.taskId}
+              className="pixel-font text-[6px] text-[#e0e0ff]/60 truncate leading-relaxed"
+            >
+              • Task: {task.message?.substring(0, 35) ?? task.taskId}
             </div>
           ))
         )}
+      </div>
+
+      {/* ── Bottom summary ── */}
+      <div className="flex justify-between items-center px-3 py-2 border-t-2 border-[#00f0ff]/30 bg-black/60">
+        <div>
+          <span className="pixel-font text-[6px] text-[#00f0ff]/50 uppercase block">
+            Agent
+          </span>
+          <span className="pixel-font text-[6px] text-[#e0e0ff]/80">
+            {state.seats.length > 0
+              ? `A: ${state.seats[0]?.label ?? "—"}`
+              : "—"}
+          </span>
+        </div>
+        <div className="text-right">
+          <span className="pixel-font text-[7px] text-[#00f0ff]">
+            TASKS:{" "}
+            <span className="text-[#ffb800]">{taskCount}</span>
+          </span>
+          <span className="pixel-font text-[7px] text-[#ff3366] ml-2">
+            ALERTS:{" "}
+            <span>{alertCount}</span>
+          </span>
+        </div>
       </div>
     </div>
   );

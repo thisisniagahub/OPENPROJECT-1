@@ -32,7 +32,7 @@ export default function OnboardingOverlay({ onDone }: Props) {
         const r = el.getBoundingClientRect();
         setRect((prev) => {
           if (!prev || Math.abs(prev.x - r.x) > 1 || Math.abs(prev.y - r.y) > 1 ||
-              Math.abs(prev.width - r.width) > 1) {
+            Math.abs(prev.width - r.width) > 1) {
             return r;
           }
           return prev;
@@ -52,134 +52,62 @@ export default function OnboardingOverlay({ onDone }: Props) {
   const spotW = rect.width + pad * 2;
   const spotH = rect.height + pad * 2;
 
-  const tooltipW = 240;
+  const tooltipW = 280;
   const tooltipX = spotX + spotW / 2 - tooltipW / 2;
-  const tooltipY = spotY - 72;
+  const tooltipY = spotY - 80;
+
+  // We use CSS variables to avoid inline style warnings for dynamic positioning
+  const overlayVars = {
+    "--spot-x": `${spotX}px`,
+    "--spot-y": `${spotY}px`,
+    "--spot-w": `${spotW}px`,
+    "--spot-h": `${spotH}px`,
+    "--clip-path": `polygon(0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%, ${spotX}px ${spotY}px, ${spotX}px ${spotY + spotH}px, ${spotX + spotW}px ${spotY + spotH}px, ${spotX + spotW}px ${spotY}px, ${spotX}px ${spotY}px)`,
+    "--tooltip-x": `${tooltipX}px`,
+    "--tooltip-y": `${tooltipY}px`,
+    "--tooltip-w": `${tooltipW}px`,
+  } as React.CSSProperties;
 
   return (
-    <>
+    <div style={overlayVars} className="onboarding-container font-cyber-display">
       {/* Dark overlay with cutout */}
       <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          zIndex: 90,
-          background: "rgba(0,0,0,0.7)",
-          pointerEvents: "auto",
-          clipPath: `polygon(
-            0% 0%, 100% 0%, 100% 100%, 0% 100%, 0% 0%,
-            ${spotX}px ${spotY}px,
-            ${spotX}px ${spotY + spotH}px,
-            ${spotX + spotW}px ${spotY + spotH}px,
-            ${spotX + spotW}px ${spotY}px,
-            ${spotX}px ${spotY}px
-          )`,
-        }}
+        className="onboarding-overlay bg-black/40 backdrop-blur-[2px]"
         onClick={finish}
       />
 
-      {/* Pulsing ring around the button */}
-      <div
-        style={{
-          position: "fixed",
-          left: spotX,
-          top: spotY,
-          width: spotW,
-          height: spotH,
-          zIndex: 91,
-          border: "2px solid #facc15",
-          boxShadow: "0 0 12px rgba(250,204,21,0.5), inset 0 0 8px rgba(250,204,21,0.15)",
-          pointerEvents: "none",
-          animation: "onboarding-pulse 1.5s ease-in-out infinite",
-        }}
-      />
+      {/* Pulsing ring around the connection dock button */}
+      <div className="onboarding-spotlight border-cyber-primary shadow-[0_0_20px_rgba(0,240,255,0.4)]">
+        <div className="corner corner-tl border-cyber-primary" />
+        <div className="corner corner-br border-cyber-primary" />
+      </div>
 
       {/* Tooltip */}
-      <div
-        style={{
-          position: "fixed",
-          left: tooltipX,
-          top: tooltipY,
-          width: tooltipW,
-          zIndex: 91,
-          background: "rgba(22,33,62,0.96)",
-          border: "3px solid #0f3460",
-          padding: "12px 14px",
-          pointerEvents: "none",
-          textAlign: "center",
-        }}
-      >
-        <p
-          style={{
-            fontFamily: '"ArkPixel", monospace',
-            fontSize: 12,
-            lineHeight: 1.8,
-            color: "#e2e8f0",
-            margin: 0,
-            textShadow: "0.5px 0 0 currentColor",
-          }}
-        >
-          Click here to configure your <strong style={{ color: "#ffe1ae" }}>Gateway</strong> connection
+      <div className="onboarding-tooltip modern-glass border-cyber-primary/40 diagonal-cut shadow-[0_0_40px_rgba(0,0,0,0.8)]">
+        <div className="tooltip-accent-corner border-cyber-primary" />
+        <div className="tooltip-pulse-dot bg-cyber-primary shadow-[0_0_10px_rgba(0,240,255,0.8)]" />
+        <h3 className="tooltip-title text-cyber-primary font-bold tracking-[0.2em] uppercase">
+          ACTION_REQUIRED: Establish_Neural_Link
+        </h3>
+        <p className="tooltip-text text-white/80 font-cyber-mono font-bold leading-relaxed">
+          Initialize the <span className="text-cyber-primary">GATEWAY</span> connection protocol to transmit tactical instructions to operatives in the field.
         </p>
-        {/* Arrow pointing down */}
-        <div
-          style={{
-            position: "absolute",
-            bottom: -10,
-            left: "50%",
-            marginLeft: -6,
-            width: 0,
-            height: 0,
-            borderLeft: "6px solid transparent",
-            borderRight: "6px solid transparent",
-            borderTop: "10px solid #0f3460",
-          }}
-        />
-        <div
-          style={{
-            position: "absolute",
-            bottom: -7,
-            left: "50%",
-            marginLeft: -4,
-            width: 0,
-            height: 0,
-            borderLeft: "4px solid transparent",
-            borderRight: "4px solid transparent",
-            borderTop: "7px solid rgba(22,33,62,0.96)",
-          }}
-        />
+
+        {/* Arrow pointers */}
+        <div className="tooltip-arrow-outer border-b-cyber-primary/40" />
+        <div className="tooltip-arrow-inner border-b-black/80" />
       </div>
 
       {/* Skip text */}
-      <div
-        style={{
-          position: "fixed",
-          left: tooltipX,
-          top: tooltipY - 28,
-          width: tooltipW,
-          zIndex: 91,
-          textAlign: "center",
-        }}
-      >
+      <div className="onboarding-skip">
         <button
           type="button"
           onClick={finish}
-          style={{
-            background: "none",
-            border: "none",
-            color: "#64748b",
-            fontFamily: 'var(--font-pixel), "ArkPixel", monospace',
-            fontSize: 8,
-            cursor: "pointer",
-            textDecoration: "underline",
-            textUnderlineOffset: 3,
-            padding: 4,
-            pointerEvents: "auto",
-          }}
+          className="px-6 py-2 bg-black/40 border border-cyber-primary/20 text-cyber-primary/40 hover:text-cyber-primary hover:border-cyber-primary transition-all duration-300 font-cyber-mono font-bold tracking-[0.3em] diagonal-cut"
         >
-          Skip
+          {">>> OVERRIDE_BYPASS <<<"}
         </button>
       </div>
-    </>
+    </div>
   );
 }

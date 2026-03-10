@@ -15,7 +15,11 @@ import type {
   StudioSnapshot,
 } from "@/types/game";
 import { MAX_CHAT, MAX_SESSIONS } from "./constants";
-import { WORKER_SPRITES } from "@/components/game/config/animations";
+import {
+  WORKER_SPRITES,
+  getCharacterConfig,
+  getWorkerSpriteByAgentId,
+} from "@/components/game/config/animations";
 import type { SeatDef as DiscoveredSeat } from "@/components/game/utils/MapHelpers";
 import type { PersistedSeatConfig } from "./persistence";
 
@@ -105,20 +109,43 @@ export function mergeDiscoveredSeats(
     const stored = storedById.get(seat.seatId);
     const runtime = currentById.get(seat.seatId);
     const fallback = WORKER_SPRITES[index];
+    const storedSprite = stored?.agentId ? getWorkerSpriteByAgentId(stored.agentId) : undefined;
+    const runtimeSprite = runtime?.agentId ? getWorkerSpriteByAgentId(runtime.agentId) : undefined;
+    const legacyStoredSprite = !storedSprite && stored?.spriteKey
+      ? getCharacterConfig(stored.spriteKey)
+      : undefined;
+    const legacyRuntimeSprite = !runtimeSprite && runtime?.spriteKey
+      ? getCharacterConfig(runtime.spriteKey)
+      : undefined;
+    const resolvedSprite = storedSprite ?? runtimeSprite ?? legacyStoredSprite ?? legacyRuntimeSprite ?? fallback;
 
-    const assigned = stored?.assigned ?? Boolean(fallback);
-    const spriteKey = stored?.spriteKey ?? fallback?.key;
-    const spritePath = stored?.spritePath ?? fallback?.path;
-    const label = stored?.label ?? fallback?.label ?? `Seat ${index + 1}`;
-    const roleTitle = stored?.roleTitle ?? (assigned ? "Agent" : undefined);
+    const assigned = stored?.assigned ?? runtime?.assigned ?? Boolean(resolvedSprite);
+    const rawSpriteKey = resolvedSprite?.key ?? stored?.spriteKey ?? runtime?.spriteKey;
+    const isValidSprite = WORKER_SPRITES.some((ws) => ws.key === rawSpriteKey);
+    const spriteKey = assigned
+      ? (isValidSprite ? rawSpriteKey : resolvedSprite?.key)
+      : undefined;
+    const spritePath = assigned
+      ? (resolvedSprite?.path ?? (isValidSprite ? (stored?.spritePath ?? runtime?.spritePath) : undefined))
+      : undefined;
+    const label = stored?.label ?? runtime?.label ?? resolvedSprite?.label ?? `Seat ${index + 1}`;
+    const roleTitle = stored?.roleTitle ?? runtime?.roleTitle ?? (assigned ? "Agent" : undefined);
+    const agentId = assigned
+      ? (stored?.agentId ?? runtime?.agentId ?? resolvedSprite?.agentId)
+      : undefined;
+    const openclawId = assigned
+      ? (stored?.openclawId ?? runtime?.openclawId ?? resolvedSprite?.openclawId)
+      : undefined;
 
     return {
       seatId: seat.seatId,
       label,
       roleTitle,
       assigned,
-      spriteKey: assigned ? spriteKey : undefined,
-      spritePath: assigned ? spritePath : undefined,
+      agentId,
+      openclawId,
+      spriteKey,
+      spritePath,
       spawnX: seat.x,
       spawnY: seat.y,
       spawnFacing: seat.facing,

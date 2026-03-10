@@ -13,20 +13,32 @@ datasource db {
   url      = env("DATABASE_URL")
 }
 
-model User {
-  id        String   @id @default(cuid())
-  email     String   @unique
-  name      String?
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model OpenprojectSession {
+  sessionKey   String            @id @map("session_key")
+  label        String?
+  createdAt    DateTime          @map("created_at")
+  updatedAt    DateTime          @map("updated_at")
+  messageCount Int               @default(0) @map("message_count")
+  tasks        OpenprojectTask[]
+
+  @@map("openproject_sessions")
 }
 
-model Post {
-  id        String   @id @default(cuid())
-  title     String
-  content   String?
-  published Boolean  @default(false)
-  authorId  String
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
+model OpenprojectTask {
+  taskId      String             @id @map("task_id")
+  message     String
+  status      String
+  sessionKey  String             @map("session_key")
+  seatId      String?            @map("seat_id")
+  actorName   String?            @map("actor_name")
+  agentId     String?            @map("agent_id")
+  openclawId  String?            @map("openclaw_id")
+  result      String?
+  createdAt   DateTime           @map("created_at")
+  completedAt DateTime?          @map("completed_at")
+  runId       String?            @map("run_id")
+  session     OpenprojectSession @relation(fields: [sessionKey], references: [sessionKey], onDelete: Cascade)
+
+  @@index([sessionKey, createdAt], map: "idx_openproject_tasks_session_created")
+  @@map("openproject_tasks")
 }

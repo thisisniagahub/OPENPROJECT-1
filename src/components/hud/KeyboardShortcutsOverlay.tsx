@@ -19,21 +19,21 @@ const SHORTCUTS: Shortcut[] = [
   // Navigation
   { key: "?", label: "Show shortcuts", category: "Navigation" },
   { key: "Esc", label: "Close panel", category: "Navigation" },
-  { key: "1", label: "Toggle agent status", category: "Navigation" },
-  { key: "2", label: "Toggle task history", category: "Navigation" },
-  { key: "3", label: "Toggle chat panel", category: "Navigation" },
-  { key: "4", label: "Toggle model selector", category: "Navigation" },
-  { key: "5", label: "Toggle terminal", category: "Navigation" },
+  { key: "1", label: "Toggle agent registry", category: "Navigation" },
+  { key: "2", label: "Toggle operations log", category: "Navigation" },
+  { key: "3", label: "Toggle command terminal", category: "Navigation" },
+  { key: "4", label: "Toggle active core", category: "Navigation" },
+  { key: "5", label: "Toggle system config", category: "Navigation" },
 
   // Modes
-  { key: "E", label: "Edit mode", icon: <Edit className="w-3 h-3" />, category: "Modes" },
-  { key: "P", label: "Play mode", icon: <Gamepad2 className="w-3 h-3" />, category: "Modes" },
+  { key: "E", label: "Edit mode", icon: <Edit className="w-3 h-3 text-cyan-500" />, category: "Modes" },
+  { key: "P", label: "Play mode", icon: <Gamepad2 className="w-3 h-3 text-cyan-500" />, category: "Modes" },
 
   // Actions
-  { key: "Ctrl+S", label: "Save layout", icon: <Save className="w-3 h-3" />, category: "Actions" },
-  { key: "N", label: "New session", icon: <Plus className="w-3 h-3" />, category: "Actions" },
-  { key: "C", label: "Connect/Disconnect", icon: <Wifi className="w-3 h-3" />, category: "Actions" },
-  { key: ",", label: "Open settings", icon: <Settings className="w-3 h-3" />, category: "Actions" },
+  { key: "Ctrl+S", label: "Save layout", icon: <Save className="w-3 h-3 text-cyan-500" />, category: "Actions" },
+  { key: "N", label: "New session", icon: <Plus className="w-3 h-3 text-cyan-500" />, category: "Actions" },
+  { key: "C", label: "Connect/Disconnect", icon: <Wifi className="w-3 h-3 text-cyan-500" />, category: "Actions" },
+  { key: ",", label: "Open config", icon: <Settings className="w-3 h-3 text-cyan-500" />, category: "Actions" },
 
   // Game
   { key: "WASD", label: "Move camera", category: "Game" },
@@ -52,44 +52,48 @@ export default function KeyboardShortcutsOverlay({ isOpen, onClose }: KeyboardSh
   if (!isOpen) return null;
 
   return (
-    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="w-full max-w-lg mx-4 bg-slate-900 border-2 border-slate-700 rounded-lg shadow-2xl overflow-hidden">
+    <div className="fixed inset-0 z-[100] flex items-center justify-center bg-[#02050a]/90 backdrop-blur-sm">
+      <div className="w-full max-w-lg mx-4 bg-[#050a15] border-2 border-cyan-500 shadow-[0_0_30px_rgba(0,240,255,0.2)] flex flex-col relative overflow-hidden">
+        <div className="absolute inset-0 pointer-events-none bg-[linear-gradient(rgba(0,240,255,0.03)_1px,transparent_1px),linear-gradient(90deg,rgba(0,240,255,0.03)_1px,transparent_1px)] bg-[size:10px_10px]" />
+
         {/* Header */}
-        <div className="flex items-center justify-between px-4 py-3 border-b border-slate-700 bg-slate-800">
+        <div className="relative flex items-center justify-between px-4 py-3 border-b-2 border-cyan-500/50 bg-[#0a0f1c]">
+          <div className="absolute top-0 left-0 w-2 h-2 border-r border-b border-cyan-400" />
           <div className="flex items-center gap-2">
-            <Keyboard className="w-4 h-4 text-purple-400" />
-            <h2 className="text-sm font-bold text-white" style={{ fontFamily: '"Ark Pixel", monospace' }}>
-              Keyboard Shortcuts
+            <Keyboard className="w-4 h-4 text-cyan-400" />
+            <h2 className="text-[12px] font-black text-white uppercase tracking-[0.2em]">
+              Key Bindings
             </h2>
           </div>
           <button
             onClick={onClose}
-            className="p-1 text-slate-400 hover:text-white transition-colors"
+            title="Close shortcuts"
+            className="p-1 border border-cyan-500/30 text-cyan-500 hover:bg-cyan-500 hover:text-black transition-colors z-10"
           >
-            <X size={18} />
+            <X size={14} strokeWidth={3} />
           </button>
         </div>
 
         {/* Shortcuts list */}
-        <div className="p-4 space-y-4 max-h-[70vh] overflow-y-auto">
+        <div className="relative z-10 p-5 space-y-6 max-h-[70vh] overflow-y-auto custom-scrollbar">
           {Object.entries(groupedShortcuts).map(([category, shortcuts]) => (
             <div key={category}>
-              <h3 className="text-xs text-slate-400 mb-2 uppercase tracking-wider" style={{ fontFamily: '"Ark Pixel", monospace' }}>
-                {category}
+              <h3 className="text-[9px] font-black text-cyan-500 mb-3 uppercase tracking-widest flex items-center gap-2">
+                <span className="w-2 h-2 bg-cyan-500" /> {category}
               </h3>
-              <div className="space-y-1">
+              <div className="grid grid-cols-1 gap-2">
                 {shortcuts.map((shortcut) => (
                   <div
                     key={shortcut.key}
-                    className="flex items-center justify-between py-1.5 px-2 rounded hover:bg-slate-800/50 transition-colors"
+                    className="flex items-center justify-between py-2 px-3 border border-cyan-900 bg-[#02050a] hover:bg-[#0a0f1c] hover:border-cyan-500/50 transition-colors"
                   >
-                    <div className="flex items-center gap-2">
-                      {shortcut.icon}
-                      <span className="text-xs text-slate-300" style={{ fontFamily: '"Ark Pixel", monospace' }}>
+                    <div className="flex items-center gap-3">
+                      {shortcut.icon && <div className="p-1 bg-cyan-900/30 border border-cyan-900/50">{shortcut.icon}</div>}
+                      <span className="text-[10px] font-bold text-slate-300 uppercase tracking-widest">
                         {shortcut.label}
                       </span>
                     </div>
-                    <kbd className="px-2 py-1 bg-slate-800 border border-slate-700 rounded text-xs text-white font-mono">
+                    <kbd className="px-2 py-1 bg-cyan-500/10 border border-cyan-500/40 text-[10px] text-cyan-400 font-mono tracking-widest shadow-[0_0_5px_rgba(0,240,255,0.2)]">
                       {shortcut.key}
                     </kbd>
                   </div>
@@ -100,9 +104,9 @@ export default function KeyboardShortcutsOverlay({ isOpen, onClose }: KeyboardSh
         </div>
 
         {/* Footer */}
-        <div className="px-4 py-3 border-t border-slate-700 bg-slate-800/50">
-          <p className="text-xs text-slate-500 text-center" style={{ fontFamily: '"Ark Pixel", monospace' }}>
-            Press <kbd className="px-1 py-0.5 bg-slate-700 rounded text-white">?</kbd> to toggle this overlay
+        <div className="relative z-10 px-4 py-3 border-t border-cyan-500/30 bg-[#0a0f1c]">
+          <p className="text-[8px] font-black text-cyan-700 text-center uppercase tracking-widest">
+            PRESS <kbd className="px-1.5 py-0.5 bg-cyan-900 text-cyan-400 mx-1">?</kbd> TO TOGGLE ASSISTANCE PROTOCOL
           </p>
         </div>
       </div>

@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { ChevronDown, Cpu, Search, Check, Zap, Code, Brain, Sparkles, Star, X } from "lucide-react";
 import { useStudio } from "@/lib/store";
-import type { ModelChoice } from "@/lib/gateway-handler";
+import type { ModelChoice } from "@/lib/gateway-types";
 
 interface ExtendedModelChoice extends ModelChoice {
   name?: string;
@@ -57,37 +57,44 @@ export default function ModelSelector({ onModelSelect }: ModelSelectorProps) {
   const [isLoading, setIsLoading] = useState(false);
   const [selectedProvider, setSelectedProvider] = useState<string | null>(null);
 
-  const { state } = useStudio();
+  const { state, fetchModels: loadGatewayModels, selectModel } = useStudio();
   const isConnected = state.connection === "connected";
 
-  useEffect(() => {
-    fetchModels();
-  }, []);
-
-  const fetchModels = async () => {
+  const loadModels = useCallback(async () => {
     setIsLoading(true);
     try {
-      const res = await fetch("/api/models");
-      const data = await res.json();
-      if (data.models) {
-        setModels(data.models);
-        if (data.defaultModel) {
-          setSelectedModel(data.defaultModel);
-        }
+      const available = await loadGatewayModels();
+      setModels(available);
+      if (!selectedModel && available[0]?.id) {
+        setSelectedModel(available[0].id);
       }
     } catch (err) {
       console.error("Failed to fetch models:", err);
     } finally {
       setIsLoading(false);
     }
-  };
+  }, [loadGatewayModels, selectedModel]);
 
-  const handleSelect = useCallback((model: ExtendedModelChoice) => {
+  useEffect(() => {
+    if (isConnected && models.length === 0) {
+      void loadModels();
+    }
+  }, [isConnected, models.length, loadModels]);
+
+  useEffect(() => {
+    if (state.sessionMetrics.model) {
+      setSelectedModel(state.sessionMetrics.model);
+    }
+  }, [state.sessionMetrics.model]);
+
+  const handleSelect = useCallback(async (model: ExtendedModelChoice) => {
+    const applied = await selectModel(model.id);
+    if (!applied) return;
     setSelectedModel(model.id);
     setIsOpen(false);
     setSearch("");
     onModelSelect?.(model);
-  }, [onModelSelect]);
+  }, [onModelSelect, selectModel]);
 
   const filteredModels = models.filter((model) => {
     const matchesSearch = model.id.toLowerCase().includes(search.toLowerCase()) ||
@@ -113,67 +120,41 @@ export default function ModelSelector({ onModelSelect }: ModelSelectorProps) {
 
   if (!isConnected) {
     return (
-      <div className="px-3 py-2 text-slate-500 text-xs flex items-center gap-2 bg-slate-800/50 border border-slate-700/50 rounded" style={{ fontFamily: '"Ark Pixel", monospace' }}>
-        <Cpu className="w-4 h-4" />
-        <span>Connect to select model</span>
+      <div className="px-2 py-1 border border-red-900 bg-red-900/10 text-red-500 text-[8px] font-black uppercase tracking-widest text-center min-w-[120px]">
+        UPLINK OFFLINE
+
       </div>
     );
   }
 
   return (
-    <div className="relative">
+    <div className="relative pointer-events-auto">
       {/* Trigger */}
       <button
         onClick={() => setIsOpen(!isOpen)}
         disabled={isLoading}
-        className="flex items-center gap-2 px-3 py-2 bg-slate-800 border border-slate-700 rounded hover:border-slate-500 transition-colors min-w-[200px]"
+        className="flex items-center gap-2 px-2 py-1.5 bg-[#02050a] border border-cyan-500/50 hover:border-cyan-400 hover:bg-[#050a15] transition-colors min-w-[150px]"
       >
-        <Cpu className="w-4 h-4" style={{ color: providerColor }} />
-        <div className="flex-1 text-left">
-          <div className="text-xs text-white truncate" style={{ fontFamily: '"Ark Pixel", monospace' }}>
-            {isLoading ? "Loading..." : selectedModelData?.name || "Select Model"}
-          </div>
-          {!isLoading && selectedModelData && (
-            <div className="text-[10px] text-slate-500 truncate">
-              {selectedModelData.provider}
-            </div>
-          )}
-        </div>
-        {selectedModelData?.isDefault && (
-          <span className="px-1.5 py-0.5 text-[10px] bg-green-500/20 text-green-400 rounded">
-            DEFAULT
-          </span>
-        )}
-        <ChevronDown className={`w-4 h-4 text-slate-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
+        <Cpu className="w-3 h-3 text-cyan-500" />
+        <span className="text-[8px] font-black uppercase tracking-widest text-cyan-400 truncate flex-1 text-left">
+          {isLoading ? "SCANNING..." : selectedModelData?.id.split("/").pop() || "SELECT CORE"}
+        </span>
+        <ChevronDown className={`w-3 h-3 text-cyan-700 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </button>
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-96 bg-slate-900 border border-slate-700 rounded-lg shadow-xl z-50 overflow-hidden">
-          {/* Header */}
-          <div className="px-4 py-3 border-b border-slate-700 bg-slate-800/50">
-            <div className="flex items-center justify-between mb-2">
-              <h3 className="text-sm font-bold text-white" style={{ fontFamily: '"Ark Pixel", monospace' }}>
-                🤖 AI Model Selection
-              </h3>
-              <button
-                onClick={() => setIsOpen(false)}
-                className="p-1 text-slate-400 hover:text-white transition-colors"
-              >
-                <X className="w-4 h-4" />
-              </button>
-            </div>
-
-            {/* Search */}
-            <div className="relative mb-2">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
+        <div className="absolute bottom-full mb-1 right-0 w-64 bg-[#050a15] border border-cyan-400 shadow-[0_0_15px_rgba(0,240,255,0.15)] z-[100] flex flex-col">
+          {/* Search */}
+          <div className="p-2 border-b border-cyan-900 bg-[#02050a]">
+            <div className="relative">
+              <Search className="absolute left-2 top-1/2 -translate-y-1/2 w-3 h-3 text-cyan-600" />
               <input
                 type="text"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
-                placeholder="Search models..."
-                className="w-full pl-10 pr-3 py-2 bg-slate-800 border border-slate-700 rounded text-xs text-white placeholder:text-slate-500 focus:outline-none focus:border-purple-500"
-                style={{ fontFamily: '"Ark Pixel", monospace' }}
+                placeholder="QUERY CORES..."
+                className="pixel-input w-full pl-6 text-[8px] py-1"
               />
             </div>
 
@@ -181,11 +162,10 @@ export default function ModelSelector({ onModelSelect }: ModelSelectorProps) {
             <div className="flex flex-wrap gap-1">
               <button
                 onClick={() => setSelectedProvider(null)}
-                className={`px-2 py-1 text-[10px] rounded transition-colors ${
-                  !selectedProvider
-                    ? "bg-white text-black"
-                    : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                }`}
+                className={`px-2 py-1 text-[10px] rounded transition-colors ${!selectedProvider
+                  ? "bg-white text-black"
+                  : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                  }`}
               >
                 All
               </button>
@@ -193,11 +173,10 @@ export default function ModelSelector({ onModelSelect }: ModelSelectorProps) {
                 <button
                   key={provider}
                   onClick={() => setSelectedProvider(provider)}
-                  className={`px-2 py-1 text-[10px] rounded transition-colors ${
-                    selectedProvider === provider
-                      ? "bg-white text-black"
-                      : "bg-slate-700 text-slate-300 hover:bg-slate-600"
-                  }`}
+                  className={`px-2 py-1 text-[10px] rounded transition-colors ${selectedProvider === provider
+                    ? "bg-white text-black"
+                    : "bg-slate-700 text-slate-300 hover:bg-slate-600"
+                    }`}
                 >
                   {provider}
                 </button>
@@ -206,124 +185,53 @@ export default function ModelSelector({ onModelSelect }: ModelSelectorProps) {
           </div>
 
           {/* Models list */}
-          <div className="max-h-80 overflow-y-auto">
+          <div className="max-h-60 overflow-y-auto custom-scrollbar">
             {Object.entries(groupedModels).map(([provider, providerModels]) => (
               <div key={provider}>
-                <div
-                  className="px-4 py-2 text-xs font-medium flex items-center gap-2"
-                  style={{
-                    backgroundColor: `${PROVIDER_COLORS[provider] || "#64748B"}15`,
-                    color: PROVIDER_COLORS[provider] || "#94A3B8",
-                    fontFamily: '"Ark Pixel", monospace'
-                  }}
-                >
-                  <Cpu className="w-3 h-3" />
-                  {provider}
-                  <span className="text-slate-500 ml-auto">{providerModels.length}</span>
+                <div className="px-2 py-1 text-[7px] font-black text-slate-500 uppercase tracking-widest bg-[#0a0f1c] border-y border-slate-800 flex justify-between">
+                  <span>{provider}</span>
+                  <span className="text-slate-500">{providerModels.length}</span>
                 </div>
-                {providerModels.map((model) => {
-                  const isSelected = selectedModel === model.id;
-                  const modelColor = PROVIDER_COLORS[model.provider] || "#64748B";
-
-                  return (
-                    <button
-                      key={model.id}
-                      onClick={() => handleSelect(model)}
-                      className={`w-full flex items-start gap-3 px-4 py-3 text-left hover:bg-slate-800 transition-colors border-l-2 ${
-                        isSelected
-                          ? "bg-slate-800/80 border-l-green-500"
-                          : "border-l-transparent hover:border-l-slate-600"
+                {providerModels.map((model) => (
+                  <button
+                    key={model.id}
+                    onClick={() => handleSelect(model)}
+                    className={`w-full flex items-center gap-2 px-2 py-1.5 text-left border-l-2 transition-colors ${selectedModel === model.id
+                      ? "bg-cyan-500/10 border-cyan-400"
+                      : "border-transparent hover:bg-cyan-900/30 hover:border-cyan-700"
                       }`}
-                    >
-                      {/* Model icon */}
-                      <div
-                        className="w-10 h-10 rounded-lg flex items-center justify-center flex-shrink-0"
-                        style={{ backgroundColor: `${modelColor}20` }}
-                      >
-                        <Code className="w-5 h-5" style={{ color: modelColor }} />
+                  >
+                    <div className="flex-1 min-w-0">
+                      <div className={`text-[8px] font-bold uppercase tracking-widest truncate ${selectedModel === model.id ? "text-cyan-400" : "text-slate-300"
+                        }`}>
+                        {model.id.split("/").pop()}
                       </div>
-
-                      {/* Model info */}
-                      <div className="flex-1 min-w-0">
-                        <div className="flex items-center gap-2 mb-1">
-                          <span
-                            className="text-sm font-medium text-white"
-                            style={{ fontFamily: '"Ark Pixel", monospace' }}
-                          >
-                            {model.name || model.id.split("/").pop()}
-                          </span>
-                          {model.isDefault && (
-                            <Star className="w-3 h-3 text-yellow-400 fill-yellow-400" />
-                          )}
-                        </div>
-
-                        {model.description && (
-                          <div className="text-xs text-slate-400 mb-2 line-clamp-2">
-                            {model.description}
-                          </div>
-                        )}
-
-                        {/* Badges */}
-                        {model.badges && model.badges.length > 0 && (
-                          <div className="flex flex-wrap gap-1 mb-2">
-                            {model.badges.map((badge) => (
-                              <span
-                                key={badge}
-                                className={`px-1.5 py-0.5 text-[10px] rounded border ${
-                                  BADGE_COLORS[badge] || "bg-slate-700 text-slate-300 border-slate-600"
-                                }`}
-                              >
-                                {badge}
-                              </span>
-                            ))}
-                          </div>
-                        )}
-
-                        {/* Context window */}
-                        {model.contextWindow && (
-                          <div className="text-[10px] text-slate-500">
-                            {Math.round(model.contextWindow / 1000)}k context window
-                          </div>
-                        )}
-                      </div>
-
-                      {/* Selected indicator */}
-                      {isSelected && (
-                        <div className="flex-shrink-0">
-                          <div className="w-6 h-6 bg-green-500 rounded-full flex items-center justify-center">
-                            <Check className="w-4 h-4 text-black" />
-                          </div>
+                      {model.contextWindow && (
+                        <div className="text-[7px] font-mono text-cyan-700 mt-0.5">
+                          CTX: {Math.round(model.contextWindow / 1000)}K
                         </div>
                       )}
-                    </button>
-                  );
-                })}
+                    </div>
+                    {selectedModel === model.id && (
+                      <Check className="w-3 h-3 text-cyan-400" />
+                    )}
+                  </button>
+                ))}
               </div>
             ))}
 
             {filteredModels.length === 0 && (
-              <div className="px-4 py-8 text-center">
-                <div className="text-slate-500 text-xs" style={{ fontFamily: '"Ark Pixel", monospace' }}>
-                  No models found
-                </div>
-                <button
-                  onClick={() => {
-                    setSearch("");
-                    setSelectedProvider(null);
-                  }}
-                  className="mt-2 text-xs text-purple-400 hover:text-purple-300"
-                >
-                  Clear filters
-                </button>
+              <div className="py-4 text-center text-[8px] font-black uppercase tracking-widest text-cyan-900">
+                NO CORES FOUND
               </div>
             )}
           </div>
 
           {/* Footer */}
-          <div className="px-4 py-3 border-t border-slate-700 bg-slate-800/30">
-            <div className="flex items-center justify-between text-[10px] text-slate-500">
-              <span>{models.length} models available</span>
-              <span>Default: Qwen Coder</span>
+          <div className="px-2 py-1 border-t border-cyan-900 bg-[#02050a]">
+            <div className="flex items-center justify-between text-[7px] font-mono text-cyan-700">
+              <span>{models.length} CORES</span>
+              <span>DEFAULT: QWEN</span>
             </div>
           </div>
         </div>

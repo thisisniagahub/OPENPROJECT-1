@@ -1,0 +1,40 @@
+
+ RUN  v4.0.18 N:/OPENPROJECT/OPENPROJECT-1
+
+ ✓ src/__tests__/agent-data.test.ts > agent-data > has exactly 24 agents 22ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > each agent has required fields 74ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > all agent IDs are unique 1ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > all agent codes are unique 0ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > all mapped openclaw IDs use valid workspace names 3ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > department intel has 3 agents 1ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > department content has 9 agents 6ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > department commerce has 6 agents 1ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > department ops has 3 agents 0ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > department research has 1 agents 1ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > department labs has 2 agents 2ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > has 6 departments with labels and colors 4ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > calculates revenue totals correctly 1ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > has a label for every agent 1ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > getAgentById > returns agent for valid ID 1ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > getAgentById > returns undefined for invalid ID 2ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > getAgentByOpenclawId > returns agent for valid OpenClaw ID 0ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > getAgentByOpenclawId > returns undefined for invalid OpenClaw ID 0ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > getAgentDepartment > returns department info for valid agent 0ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > getAgentDepartment > returns undefined for invalid agent 0ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > getAgentsByDept > returns correct agents for intel 1ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > getAgentsByDept > returns empty for invalid dept 0ms
+ ✓ src/__tests__/agent-data.test.ts > agent-data > getRandomTaskTemplate > returns a string from department templates 1ms
+ ✓ src/__tests__/server-store.test.ts > normalizeOperatorSessionKey > defaults missing session keys to the NiagaBot main session 27ms
+ ✓ src/__tests__/server-store.test.ts > normalizeOperatorSessionKey > accepts user-facing NiagaBot session keys 9ms
+ ✓ src/__tests__/server-store.test.ts > normalizeOperatorSessionKey > rejects direct specialist session keys 3ms
+ ✓ src/__tests__/store.test.ts > store routing helpers > always uses the NiagaBot main session as the operator entry point 10ms
+ ✓ src/__tests__/store.test.ts > store routing helpers > resolves the correct agent identity even when seats share the same sprite key 15ms
+ ✓ src/__tests__/store.test.ts > store routing helpers > wraps mapped seat tasks as NiagaBot delegation hints instead of direct specialist routing 2ms
+ ✓ src/__tests__/store.test.ts > store routing helpers > leaves untargeted tasks unchanged 8ms
+ ✓ src/__tests__/store.test.ts > canAutoConnectGateway > auto-connects only when the saved gateway does not require a runtime token 3ms
+
+ Test Files  3 passed (3)
+      Tests  31 passed (31)
+   Start at  19:45:49
+   Duration  19.24s (transform 4.51s, setup 0ms, import 6.95s, tests 279ms, environment 39.08s)
+

@@ -1,24 +1,4 @@
-import type { SeatState } from "@/types/game";
-import type { SeatDef } from "@/components/game/utils/MapHelpers";
-
-export interface GameEventMap {
-  "seats-discovered": [seats: SeatDef[]];
-  "seat-configs-updated": [seats: SeatState[]];
-  "task-assigned": [runId: string, message: string, seatId?: string];
-  "task-routed": [taskId: string, seatId: string, actorName: string];
-  "task-ready": [taskId: string, message: string, seatId?: string];
-  "task-bound": [taskId: string, runId: string];
-  "task-staged": [taskId: string, stage: "queued" | "returning", seatId?: string];
-  "task-bubble": [runId: string, text: string, ttl: number];
-  "task-aborted": [runId: string];
-  "task-completed": [runId: string];
-  "task-failed": [runId: string];
-  "subagent-assigned": [runId: string, parentRunId: string, label: string];
-  "open-terminal": [seatId?: string];
-  "open-terminal-queue": [seatId: string];
-  "stop-task": [runId: string, seatId: string];
-  "terminal-closed": [];
-}
+import type { GameEventMap } from "@/types/game";
 
 type Listener<T extends unknown[]> = (...args: T) => void;
 

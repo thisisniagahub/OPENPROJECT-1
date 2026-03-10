@@ -2,25 +2,28 @@ import * as Phaser from "phaser";
 import {
   SPRITE_KEY,
   MOVE_SPEED,
-  ALL_ANIMS,
   FRAME_WIDTH,
   FRAME_HEIGHT,
+  makeAnims,
 } from "../config/animations";
+import { buildSpriteFrames } from "../utils/MapHelpers";
 
 type Direction = "down" | "up" | "left" | "right";
 
 export class Player {
   sprite: Phaser.Physics.Arcade.Sprite;
+  private spriteKey: string;
   private cursors: Phaser.Types.Input.Keyboard.CursorKeys;
   private wasd: Record<string, Phaser.Input.Keyboard.Key>;
   private facing: Direction = "left";
   private arrow: Phaser.GameObjects.Sprite | null = null;
   private hasMovedOnce = false;
 
-  constructor(scene: Phaser.Scene, x: number, y: number) {
-    this.createAnimations(scene);
+  constructor(scene: Phaser.Scene, x: number, y: number, spriteKey = SPRITE_KEY) {
+    this.spriteKey = spriteKey;
+    this.createAnimations(scene, spriteKey);
 
-    this.sprite = scene.physics.add.sprite(x, y, SPRITE_KEY, 0);
+    this.sprite = scene.physics.add.sprite(x, y, spriteKey, 0);
     this.sprite.setDepth(5);
 
     const body = this.sprite.body as Phaser.Physics.Arcade.Body;
@@ -39,7 +42,7 @@ export class Player {
       D: Phaser.Input.Keyboard.KeyCodes.D,
     }) as Record<string, Phaser.Input.Keyboard.Key>;
 
-    this.sprite.anims.play("idle-left");
+    this.sprite.anims.play(this.getAnimKey("idle", "left"));
   }
 
   private initArrow(scene: Phaser.Scene, x: number, y: number) {
@@ -61,13 +64,21 @@ export class Player {
     this.arrow.play("boss-arrow-bounce");
   }
 
-  private createAnimations(scene: Phaser.Scene) {
-    if (scene.anims.exists("idle-down")) return;
+  private getAnimKey(prefix: "idle" | "walk", direction: Direction) {
+    return `${this.spriteKey}:${prefix}-${direction}`;
+  }
 
-    for (const anim of ALL_ANIMS) {
+  private createAnimations(scene: Phaser.Scene, spriteKey: string) {
+    if (scene.anims.exists(`${spriteKey}:idle-down`)) return;
+
+    buildSpriteFrames(scene, spriteKey);
+    const idleAnims = makeAnims(spriteKey, "idle", 1, 8);
+    const walkAnims = makeAnims(spriteKey, "walk", 2, 10);
+
+    for (const anim of [...idleAnims, ...walkAnims]) {
       const frames: Phaser.Types.Animations.AnimationFrame[] = [];
       for (let i = anim.start; i <= anim.end; i++) {
-        frames.push({ key: SPRITE_KEY, frame: i });
+        frames.push({ key: spriteKey, frame: i });
       }
       scene.anims.create({
         key: anim.key,
@@ -76,6 +87,19 @@ export class Player {
         repeat: anim.repeat,
       });
     }
+  }
+
+  setSpriteKey(nextKey: string) {
+    if (!nextKey || nextKey === this.spriteKey) return;
+
+    this.createAnimations(this.sprite.scene, nextKey);
+    this.spriteKey = nextKey;
+    this.sprite.setTexture(nextKey, 0);
+
+    const nextAnim = this.isMoving()
+      ? this.getAnimKey("walk", this.facing)
+      : this.getAnimKey("idle", this.facing);
+    this.sprite.anims.play(nextAnim);
   }
 
   isMoving(): boolean {
@@ -125,12 +149,12 @@ export class Player {
       else if (vy < 0) this.facing = "up";
       else if (vy > 0) this.facing = "down";
 
-      const walkKey = `walk-${this.facing}`;
+      const walkKey = this.getAnimKey("walk", this.facing);
       if (this.sprite.anims.currentAnim?.key !== walkKey) {
         this.sprite.anims.play(walkKey);
       }
     } else {
-      const idleKey = `idle-${this.facing}`;
+      const idleKey = this.getAnimKey("idle", this.facing);
       if (this.sprite.anims.currentAnim?.key !== idleKey) {
         this.sprite.anims.play(idleKey);
       }

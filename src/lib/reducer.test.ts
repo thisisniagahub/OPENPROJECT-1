@@ -28,19 +28,19 @@ describe("Reducer Utilities", () => {
   describe("findTask", () => {
     it("should find task by runId", () => {
       const tasks = [
-        { id: "task-1", runId: "run-123", status: "running" },
-        { id: "task-2", runId: "run-456", status: "completed" },
+        { taskId: "task-1", runId: "run-123", status: "running", message: "", sessionKey: "", createdAt: Date.now() },
+        { taskId: "task-2", runId: "run-456", status: "completed", message: "", sessionKey: "", createdAt: Date.now() },
       ];
-      const found = findTask(tasks, "run-123");
+      const found = findTask(tasks as any, "run-123");
       expect(found).toBeDefined();
-      expect(found?.id).toBe("task-1");
+      expect(found?.taskId).toBe("task-1");
     });
 
     it("should return undefined if not found", () => {
       const tasks = [
-        { id: "task-1", runId: "run-123", status: "running" },
+        { taskId: "task-1", runId: "run-123", status: "running", message: "", sessionKey: "", createdAt: Date.now() },
       ];
-      const found = findTask(tasks, "nonexistent");
+      const found = findTask(tasks as any, "nonexistent");
       expect(found).toBeUndefined();
     });
 

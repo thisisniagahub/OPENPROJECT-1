@@ -1,62 +1,58 @@
 import { NextRequest, NextResponse } from "next/server";
+import { requireApiAuth } from "@/lib/api-auth";
+import {
+  countTasks,
+  createTask,
+  deleteTask,
+  getSession,
+  getTask,
+  isTaskStatus,
+  listTasks,
+  normalizeOperatorSessionKey,
+  updateTask,
+} from "@/lib/server-store";
 
-// In-memory task store (in production, use a database)
-const taskStore = new Map<string, TaskRecord>();
-
-interface TaskRecord {
-  id: string;
-  message: string;
-  status: "pending" | "running" | "completed" | "failed" | "stopped";
-  sessionKey: string;
-  seatId?: string;
-  actorName?: string;
-  result?: string;
-  createdAt: string;
-  completedAt?: string;
-  runId?: string;
-}
-
-function generateTaskId(): string {
-  return `task_${Date.now()}_${Math.random().toString(36).substring(2, 9)}`;
-}
+export const runtime = "nodejs";
 
 // GET - List all tasks
 export async function GET(request: NextRequest) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
+
   const searchParams = request.nextUrl.searchParams;
   const sessionKey = searchParams.get("sessionKey");
-  const status = searchParams.get("status");
+  const statusParam = searchParams.get("status");
   const limit = parseInt(searchParams.get("limit") || "50");
 
-  let tasks = Array.from(taskStore.values());
-
-  // Filter by session
-  if (sessionKey) {
-    tasks = tasks.filter(t => t.sessionKey === sessionKey);
+  if (statusParam && !isTaskStatus(statusParam)) {
+    return NextResponse.json(
+      { error: `Unsupported status "${statusParam}"` },
+      { status: 400 },
+    );
   }
 
-  // Filter by status
-  if (status) {
-    tasks = tasks.filter(t => t.status === status);
-  }
-
-  // Sort by creation date (newest first)
-  tasks.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-
-  // Apply limit
-  tasks = tasks.slice(0, limit);
+  const status = statusParam && isTaskStatus(statusParam) ? statusParam : undefined;
+  const [tasks, total, filtered] = await Promise.all([
+    listTasks({ sessionKey: sessionKey ?? undefined, status, limit }),
+    countTasks(),
+    countTasks({ sessionKey: sessionKey ?? undefined, status }),
+  ]);
 
   return NextResponse.json({
     tasks,
-    total: taskStore.size,
-    filtered: tasks.length,
+    total,
+    filtered,
   });
 }
 
 // POST - Create a new task
 export async function POST(request: NextRequest) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
+
   try {
     const body = await request.json();
-    const { message, sessionKey, seatId, actorName } = body;
+    const { message, sessionKey, seatId, actorName, agentId, openclawId } = body;
 
     if (!message || typeof message !== "string") {
       return NextResponse.json(
@@ -65,17 +61,37 @@ export async function POST(request: NextRequest) {
       );
     }
 
-    const task: TaskRecord = {
-      id: generateTaskId(),
-      message,
-      status: "pending",
-      sessionKey: sessionKey || "agent:main:main",
-      seatId,
-      actorName,
-      createdAt: new Date().toISOString(),
-    };
+    const sessionResolution = normalizeOperatorSessionKey(sessionKey);
+    if ("error" in sessionResolution) {
+      return NextResponse.json(
+        { error: sessionResolution.error },
+        { status: 400 },
+      );
+    }
 
-    taskStore.set(task.id, task);
+    const resolvedSessionKey = sessionResolution.sessionKey;
+    const session = await getSession(resolvedSessionKey);
+    if (!session) {
+      return NextResponse.json(
+        { error: `Session ${resolvedSessionKey} not found` },
+        { status: 404 },
+      );
+    }
+
+    const task = await createTask({
+      message: message.trim(),
+      sessionKey: resolvedSessionKey,
+      seatId: typeof seatId === "string" ? seatId : undefined,
+      actorName: typeof actorName === "string" ? actorName : undefined,
+      agentId: typeof agentId === "string" ? agentId : undefined,
+      openclawId: typeof openclawId === "string" ? openclawId : undefined,
+    });
+    if (!task) {
+      return NextResponse.json(
+        { error: "Failed to create task" },
+        { status: 500 },
+      );
+    }
 
     return NextResponse.json({
       success: true,
@@ -92,6 +108,9 @@ export async function POST(request: NextRequest) {
 
 // PATCH - Update task status
 export async function PATCH(request: NextRequest) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
+
   try {
     const body = await request.json();
     const { taskId, status, result, runId } = body;
@@ -103,23 +122,25 @@ export async function PATCH(request: NextRequest) {
       );
     }
 
-    const task = taskStore.get(taskId);
+    if (status !== undefined && !isTaskStatus(status)) {
+      return NextResponse.json(
+        { error: `Unsupported status "${status}"` },
+        { status: 400 },
+      );
+    }
+
+    const task = await updateTask({
+      taskId,
+      status,
+      result: typeof result === "string" ? result : result === null ? "" : undefined,
+      runId: typeof runId === "string" ? runId : undefined,
+    });
     if (!task) {
       return NextResponse.json(
         { error: `Task ${taskId} not found` },
         { status: 404 }
       );
     }
-
-    // Update task
-    if (status) task.status = status;
-    if (result !== undefined) task.result = result;
-    if (runId !== undefined) task.runId = runId;
-    if (status === "completed" || status === "failed" || status === "stopped") {
-      task.completedAt = new Date().toISOString();
-    }
-
-    taskStore.set(taskId, task);
 
     return NextResponse.json({
       success: true,
@@ -135,6 +156,9 @@ export async function PATCH(request: NextRequest) {
 
 // DELETE - Remove a task
 export async function DELETE(request: NextRequest) {
+  const authError = requireApiAuth(request);
+  if (authError) return authError;
+
   const searchParams = request.nextUrl.searchParams;
   const taskId = searchParams.get("taskId");
 
@@ -145,14 +169,15 @@ export async function DELETE(request: NextRequest) {
     );
   }
 
-  if (!taskStore.has(taskId)) {
+  const task = await getTask(taskId);
+  if (!task) {
     return NextResponse.json(
       { error: `Task ${taskId} not found` },
       { status: 404 }
     );
   }
 
-  taskStore.delete(taskId);
+  await deleteTask(taskId);
 
   return NextResponse.json({
     success: true,

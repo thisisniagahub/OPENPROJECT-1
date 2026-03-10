@@ -25,13 +25,13 @@ interface PendingRequest {
   timer: ReturnType<typeof setTimeout>;
 }
 
-export type GatewayStatus = 
-  | "disconnected" 
-  | "connecting" 
-  | "connected" 
-  | "error" 
-  | "auth_failed" 
-  | "unreachable" 
+export type GatewayStatus =
+  | "disconnected"
+  | "connecting"
+  | "connected"
+  | "error"
+  | "auth_failed"
+  | "unreachable"
   | "rate_limited"
   | "handshaking";
 
@@ -191,10 +191,14 @@ export class GatewayClient {
         });
       };
 
-      ws.onerror = (ev) => {
+      ws.onerror = () => {
         clearTimeout(connectionTimeout);
         if (this.debug) {
-          console.error("[Gateway] WebSocket error:", ev);
+          console.warn("[Gateway] WebSocket transport error", {
+            url: this.url,
+            readyState: ws.readyState,
+            status: this._status,
+          });
         }
         // Don't overwrite terminal states set by handshake failure
         if (this._status !== "auth_failed" && this._status !== "unreachable" && this._status !== "rate_limited") {
@@ -206,7 +210,7 @@ export class GatewayClient {
       ws.onclose = (ev) => {
         clearTimeout(connectionTimeout);
         const wasConnected = this._status === "connected";
-        
+
         if (this.debug) {
           console.log(`[Gateway] WebSocket closed: code=${ev.code}, reason=${ev.reason}`);
         }
@@ -250,16 +254,6 @@ export class GatewayClient {
         }
       }, HEARTBEAT_TIMEOUT_MS);
     }, HEARTBEAT_INTERVAL_MS);
-
-    // Listen for pong
-    const pongHandler = (payload: unknown) => {
-      this.lastPongTime = Date.now();
-      if (this.heartbeatTimeout) {
-        clearTimeout(this.heartbeatTimeout);
-        this.heartbeatTimeout = null;
-      }
-    };
-    this.on("pong", pongHandler);
   }
 
   private stopHeartbeat() {
@@ -331,6 +325,10 @@ export class GatewayClient {
     // Handle pong separately
     if (frame.event === "pong") {
       this.lastPongTime = Date.now();
+      if (this.heartbeatTimeout) {
+        clearTimeout(this.heartbeatTimeout);
+        this.heartbeatTimeout = null;
+      }
       return;
     }
 
@@ -392,6 +390,7 @@ export class GatewayClient {
 
   private sendConnectHandshake() {
     const id = nextId();
+    const authToken = this.token.trim();
     const frame: GatewayFrame = {
       type: "req",
       id,
@@ -400,16 +399,16 @@ export class GatewayClient {
         minProtocol: 3,
         maxProtocol: 3,
         client: {
-          id: "gateway-client",
-          displayName: "Agent Town",
+          id: "openclaw-studio",
+          displayName: "NiagaBot Control Center",
           version: "1.0.0",
           platform: "web",
           mode: "backend",
           instanceId: `aw-${Date.now()}`,
         },
-        auth: { token: this.token },
+        ...(authToken ? { auth: { token: authToken } } : {}),
         role: "operator",
-        scopes: ["operator.read", "operator.write", "operator.admin"],
+        scopes: ["operator.read", "operator.write"],
         locale: "en-US",
       },
     };
@@ -425,13 +424,13 @@ export class GatewayClient {
     }, HANDSHAKE_TIMEOUT_MS);
 
     this.pending.set(id, {
-      resolve: () => {},
+      resolve: () => { },
       reject: (err) => {
         // Server explicitly rejected the handshake — stop retrying immediately.
         this.autoReconnect = false;
         const isRateLimited = /rate.limit|too many/i.test(err.message);
         const isAuthFailed = /auth|token|unauthorized|forbidden/i.test(err.message);
-        
+
         if (isRateLimited) {
           this.setStatus("rate_limited");
         } else if (isAuthFailed) {
@@ -475,13 +474,54 @@ export class GatewayClient {
       this.pending.set(id, { resolve, reject, timer });
 
       const frame: GatewayFrame = { type: "req", id, method, params };
-      
+
       if (this.debug) {
         console.log("[Gateway] Sending request:", frame);
       }
-      
+
       this.ws!.send(JSON.stringify(frame));
     });
+  }
+
+  // ── Convenience methods (ported from niagabot-office/OpenClawBridge.js) ──
+
+  /** Send chat message to an agent */
+  async sendChat(text: string, sessionKey = "main"): Promise<GatewayFrame> {
+    return this.request("chat.send", {
+      text,
+      sessionKey,
+      idempotencyKey: nextId(),
+    });
+  }
+
+  /** Get chat history for a session */
+  async getChatHistory(sessionKey = "main"): Promise<GatewayFrame> {
+    return this.request("chat.history", { sessionKey });
+  }
+
+  /** Abort active chat in a session */
+  async abortChat(sessionKey = "main"): Promise<GatewayFrame> {
+    return this.request("chat.abort", { sessionKey });
+  }
+
+  /** Get system presence */
+  async getPresence(): Promise<GatewayFrame> {
+    return this.request("system-presence");
+  }
+
+  /** Get health snapshot */
+  async getHealth(): Promise<GatewayFrame> {
+    return this.request("health");
+  }
+
+  /** Get gateway status */
+  async getGatewayStatus(): Promise<GatewayFrame> {
+    return this.request("status");
+  }
+
+  /** Get sessions list */
+  async getSessions(): Promise<GatewayFrame> {
+    return this.request("sessions.list");
   }
 
   /**
@@ -524,11 +564,11 @@ export class GatewayClient {
     const wasConnected = this._status === "connected";
     this.url = url;
     this.token = token;
-    
+
     if (wasConnected) {
       this.intentionalClose = false;
       this.disconnect();
-      this.connect().catch(() => {});
+      this.connect().catch(() => { });
     }
   }
 
@@ -536,8 +576,8 @@ export class GatewayClient {
    * Check if the connection is healthy.
    */
   isHealthy(): boolean {
-    return this._status === "connected" && 
-           this.ws?.readyState === WebSocket.OPEN &&
-           (Date.now() - this.lastPongTime) < HEARTBEAT_TIMEOUT_MS * 2;
+    return this._status === "connected" &&
+      this.ws?.readyState === WebSocket.OPEN &&
+      (Date.now() - this.lastPongTime) < HEARTBEAT_TIMEOUT_MS * 2;
   }
 }

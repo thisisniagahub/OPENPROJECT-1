@@ -9,7 +9,6 @@ import { z } from "zod";
 const envSchema = z.object({
   // Gateway configuration
   NEXT_PUBLIC_GATEWAY_URL: z.string().url().optional(),
-  NEXT_PUBLIC_GATEWAY_TOKEN: z.string().optional(),
   
   // API configuration
   NEXT_PUBLIC_API_URL: z.string().url().optional(),
@@ -26,8 +25,7 @@ export type EnvConfig = z.infer<typeof envSchema>;
 
 // Default values
 const DEFAULTS: Partial<EnvConfig> = {
-  NEXT_PUBLIC_GATEWAY_URL: "ws://127.0.0.1:18789",
-  NEXT_PUBLIC_GATEWAY_TOKEN: "",
+  NEXT_PUBLIC_GATEWAY_URL: "",
   NEXT_PUBLIC_API_URL: "",
   NEXT_PUBLIC_ENABLE_SOUND: true,
   NEXT_PUBLIC_ENABLE_MUSIC: true,
@@ -38,7 +36,6 @@ const DEFAULTS: Partial<EnvConfig> = {
 function parseEnv(): EnvConfig {
   const rawEnv = {
     NEXT_PUBLIC_GATEWAY_URL: process.env.NEXT_PUBLIC_GATEWAY_URL,
-    NEXT_PUBLIC_GATEWAY_TOKEN: process.env.NEXT_PUBLIC_GATEWAY_TOKEN,
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
     NEXT_PUBLIC_ENABLE_SOUND: process.env.NEXT_PUBLIC_ENABLE_SOUND,
     NEXT_PUBLIC_ENABLE_MUSIC: process.env.NEXT_PUBLIC_ENABLE_MUSIC,
@@ -66,11 +63,11 @@ export const env = parseEnv();
 
 // Helper functions
 export function getGatewayUrl(): string {
-  return env.NEXT_PUBLIC_GATEWAY_URL || DEFAULTS.NEXT_PUBLIC_GATEWAY_URL || "ws://127.0.0.1:18789";
+  return env.NEXT_PUBLIC_GATEWAY_URL?.trim() || "";
 }
 
 export function getGatewayToken(): string {
-  return env.NEXT_PUBLIC_GATEWAY_TOKEN || "";
+  return "";
 }
 
 export function isDebugEnabled(): boolean {
