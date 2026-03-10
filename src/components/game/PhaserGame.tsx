@@ -20,20 +20,37 @@ export default function PhaserGame() {
     let mounted = true;
 
     async function initGame() {
-      if (!containerRef.current) return;
+      if (!containerRef.current) {
+        console.log("[PhaserGame] No container ref");
+        return;
+      }
 
       try {
+        console.log("[PhaserGame] Starting initialization...");
         setLoading(true);
         setLoadingProgress(10);
 
-        const { gameConfig } = await import("./config");
-        if (!mounted) return;
+        // Dynamic import of game config
+        const configModule = await import("./config");
+        const gameConfig = configModule.gameConfig;
+        
+        if (!mounted) {
+          console.log("[PhaserGame] Unmounted during config load");
+          return;
+        }
         setLoadingProgress(30);
 
+        // Dynamic import of Phaser
         const Phaser = await import("phaser");
-        if (!mounted) return;
+        
+        if (!mounted) {
+          console.log("[PhaserGame] Unmounted during Phaser load");
+          return;
+        }
         setLoadingProgress(50);
 
+        // Create game
+        console.log("[PhaserGame] Creating game...");
         const game = new Phaser.Game({
           ...gameConfig,
           parent: containerRef.current,
@@ -41,20 +58,23 @@ export default function PhaserGame() {
         
         setLoadingProgress(80);
         gameRef.current = game;
+        console.log("[PhaserGame] Game created");
 
-        // Wait for game to be ready
+        // Handle ready event
         game.events.once("ready", () => {
+          console.log("[PhaserGame] Game ready");
           if (mounted) {
             setLoadingProgress(100);
             setLoading(false);
           }
         });
 
-        // Handle game errors
+        // Handle errors
         game.events.on("error", (err: Error) => {
+          console.error("[PhaserGame] Game error:", err);
           if (mounted) {
             setError({
-              message: err.message || "Game initialization failed",
+              message: err.message || "Game error",
               stack: err.stack,
               timestamp: new Date().toISOString(),
             });
@@ -62,16 +82,22 @@ export default function PhaserGame() {
           }
         });
 
-        // Timeout for loading
-        const timeout = setTimeout(() => {
+        // Timeout - force ready after 8 seconds
+        const timeoutId = setTimeout(() => {
+          console.log("[PhaserGame] Timeout - forcing ready");
           if (mounted && loading) {
+            setLoadingProgress(100);
             setLoading(false);
           }
-        }, 10000);
+        }, 8000);
 
-        return () => clearTimeout(timeout);
+        // Cleanup timeout on unmount
+        return () => {
+          clearTimeout(timeoutId);
+        };
 
       } catch (err) {
+        console.error("[PhaserGame] Init error:", err);
         if (mounted) {
           const error = err as Error;
           setError({
@@ -84,15 +110,22 @@ export default function PhaserGame() {
       }
     }
 
-    initGame();
+    const timeoutCleanup = initGame();
 
     return () => {
+      console.log("[PhaserGame] Cleanup");
       mounted = false;
+      
+      // Cleanup timeout
+      timeoutCleanup?.then?.((cleanup) => cleanup?.());
+      
+      // Destroy game
       if (gameRef.current) {
         try {
           gameRef.current.destroy(true);
-        } catch {
-          // Ignore destroy errors
+          console.log("[PhaserGame] Game destroyed");
+        } catch (e) {
+          console.log("[PhaserGame] Destroy error:", e);
         }
         gameRef.current = null;
       }
@@ -133,11 +166,7 @@ export default function PhaserGame() {
             {error.message}
           </div>
           <button
-            onClick={() => {
-              setError(null);
-              setLoading(true);
-              setLoadingProgress(0);
-            }}
+            onClick={() => window.location.reload()}
             style={{
               padding: "12px 32px",
               border: "3px solid #facc15",
@@ -146,18 +175,9 @@ export default function PhaserGame() {
               fontFamily: "inherit",
               fontSize: 10,
               cursor: "pointer",
-              transition: "all 0.2s",
-            }}
-            onMouseEnter={(e) => {
-              e.currentTarget.style.background = "#facc15";
-              e.currentTarget.style.color = "#1a1a2e";
-            }}
-            onMouseLeave={(e) => {
-              e.currentTarget.style.background = "transparent";
-              e.currentTarget.style.color = "#facc15";
             }}
           >
-            Retry
+            Reload Page
           </button>
         </div>
       </div>
@@ -227,11 +247,12 @@ export default function PhaserGame() {
     );
   }
 
+  // Game container
   return (
     <div
       ref={containerRef}
       style={{
-        width: "calc(100% - 320px)",
+        width: "100%",
         height: "100%",
         imageRendering: "pixelated",
       }}
