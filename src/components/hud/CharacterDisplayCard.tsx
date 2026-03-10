@@ -5,8 +5,8 @@ import { Zap, Sparkles } from "lucide-react";
 import {
   getCharacterById,
   calculatePowerLevel,
-  getCharacterStatsDisplay,
-  type EnhancedCharacter,
+  getCharacterEmoji,
+  type SouthParkCharacter,
 } from "@/lib/character-system";
 
 interface CharacterDisplayCardProps {
@@ -19,10 +19,19 @@ interface CharacterDisplayCardProps {
 }
 
 // Mini stat bars for compact view
-function MiniStatBars({ stats }: { stats: ReturnType<typeof getCharacterStatsDisplay> }) {
+function MiniStatBars({ stats }: { stats: SouthParkCharacter["stats"] }) {
+  const statItems = [
+    { label: "INT", value: stats.intelligence, color: "#3B82F6" },
+    { label: "CRE", value: stats.creativity, color: "#A855F7" },
+    { label: "SPD", value: stats.speed, color: "#EAB308" },
+    { label: "ACC", value: stats.accuracy, color: "#22C55E" },
+    { label: "CHA", value: stats.charisma, color: "#EC4899" },
+    { label: "LCK", value: stats.luck, color: "#F97316" },
+  ];
+
   return (
     <div className="grid grid-cols-3 gap-1">
-      {stats.slice(0, 6).map((stat) => (
+      {statItems.slice(0, 6).map((stat) => (
         <div key={stat.label} className="flex items-center gap-1">
           <span className="text-[10px] text-slate-500">{stat.label}</span>
           <div className="flex-1 h-1 bg-slate-700 rounded-full overflow-hidden">
@@ -30,7 +39,7 @@ function MiniStatBars({ stats }: { stats: ReturnType<typeof getCharacterStatsDis
               className="h-full rounded-full"
               style={{
                 width: `${stat.value}%`,
-                backgroundColor: stat.color.replace("text-", "").replace("-400", ""),
+                backgroundColor: stat.color,
               }}
             />
           </div>
@@ -38,21 +47,6 @@ function MiniStatBars({ stats }: { stats: ReturnType<typeof getCharacterStatsDis
       ))}
     </div>
   );
-}
-
-// Character emoji helper
-function getCharacterEmoji(id: string): string {
-  const emojis: Record<string, string> = {
-    stan: "🧢",
-    kyle: "🟢",
-    cartman: "🔴",
-    kenny: "🧥",
-    butters: "😊",
-    randy: "🔬",
-    chef: "👨‍🍳",
-    garrison: "📚",
-  };
-  return emojis[id] || "👤";
 }
 
 function CharacterDisplayCardContent({
@@ -65,7 +59,7 @@ function CharacterDisplayCardContent({
   frame,
   currentPhrase,
 }: {
-  character: EnhancedCharacter;
+  character: SouthParkCharacter;
   variant: "compact" | "full" | "minimal";
   showStats: boolean;
   showLevel: boolean;
@@ -75,7 +69,6 @@ function CharacterDisplayCardContent({
   currentPhrase: string;
 }) {
   const powerLevel = calculatePowerLevel(character.stats);
-  const statsDisplay = getCharacterStatsDisplay(character.stats);
   const bounceTransform = animate ? `translateY(${Math.sin(frame * Math.PI / 2) * 2}px)` : "";
 
   // Minimal variant
@@ -140,7 +133,7 @@ function CharacterDisplayCardContent({
                 {character.rarity.toUpperCase()}
               </span>
             </div>
-            <p className="text-xs text-slate-400">{character.role}</p>
+            <p className="text-xs text-slate-400">{character.personality}</p>
 
             <div className="flex items-center gap-2 mt-2">
               <Zap className="w-4 h-4 text-yellow-400" />
@@ -164,7 +157,7 @@ function CharacterDisplayCardContent({
 
         {showStats && (
           <div className="mt-4 pt-4 border-t border-slate-700">
-            <MiniStatBars stats={statsDisplay} />
+            <MiniStatBars stats={character.stats} />
           </div>
         )}
 
@@ -213,7 +206,7 @@ function CharacterDisplayCardContent({
               {character.rarity}
             </span>
           </div>
-          <div className="text-xs text-slate-500">{character.role}</div>
+          <div className="text-xs text-slate-500">{character.category}</div>
           <div className="flex items-center gap-1 mt-1">
             <Zap className="w-3 h-3 text-yellow-400" />
             <span className="text-xs text-white">{powerLevel}</span>
@@ -222,7 +215,7 @@ function CharacterDisplayCardContent({
 
         {showStats && (
           <div className="w-20">
-            <MiniStatBars stats={statsDisplay} />
+            <MiniStatBars stats={character.stats} />
           </div>
         )}
       </div>
@@ -326,7 +319,7 @@ export function CharacterFloatingWidget({
           {character.name}
         </div>
         <div className="text-[10px] text-slate-500">
-          Lv.{character.level.current} • {character.role}
+          Lv.{character.level.current} • {getCategoryLabel(character.category)}
         </div>
       </div>
 
@@ -334,3 +327,6 @@ export function CharacterFloatingWidget({
     </button>
   );
 }
+
+// Helper import
+import { getCategoryLabel } from "@/lib/character-system";

@@ -13,7 +13,12 @@ import ModelSelector from "@/components/hud/ModelSelector";
 import CharacterShowcasePanel from "@/components/hud/CharacterShowcasePanel";
 import CharacterDisplayCard, { CharacterFloatingWidget } from "@/components/hud/CharacterDisplayCard";
 import { ToastProvider, toastSuccess } from "@/components/ui/toast-provider";
-import { getCharacterById, calculatePowerLevel, type EnhancedCharacter } from "@/lib/character-system";
+import {
+  getCharacterById,
+  calculatePowerLevel,
+  getCharacterEmoji,
+  type SouthParkCharacter,
+} from "@/lib/character-system";
 
 // Helper functions for character selection
 function getSelectedCharacter(): string {
@@ -28,7 +33,7 @@ function setSelectedCharacter(characterId: string): void {
 }
 
 // Helper to load character with XP from localStorage
-function loadCharacterWithProgress(id: string): EnhancedCharacter | undefined {
+function loadCharacterWithProgress(id: string): SouthParkCharacter | undefined {
   const character = getCharacterById(id);
   if (!character) return undefined;
 
@@ -96,7 +101,7 @@ function AppContent() {
   const [showAgentPanel, setShowAgentPanel] = useState(false);
   const [showCharacterSelect, setShowCharacterSelect] = useState(false);
   const [currentCharacter, setCurrentCharacter] = useState<string>("");
-  const [characterData, setCharacterData] = useState<EnhancedCharacter | undefined>();
+  const [characterData, setCharacterData] = useState<SouthParkCharacter | undefined>();
 
   // Load saved character on mount
   useEffect(() => {
