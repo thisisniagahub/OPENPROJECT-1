@@ -10,9 +10,10 @@ import SettingsPanel from "@/components/hud/SettingsPanel";
 import TaskHistory from "@/components/hud/TaskHistory";
 import AgentStatusPanel from "@/components/hud/AgentStatusPanel";
 import ModelSelector from "@/components/hud/ModelSelector";
-import CharacterSelectPanel from "@/components/hud/CharacterSelectPanel";
+import CharacterShowcasePanel from "@/components/hud/CharacterShowcasePanel";
+import CharacterDisplayCard, { CharacterFloatingWidget } from "@/components/hud/CharacterDisplayCard";
 import { ToastProvider, toastSuccess } from "@/components/ui/toast-provider";
-import { getCharacterById } from "@/lib/southpark-characters";
+import { getCharacterById, calculatePowerLevel, type EnhancedCharacter } from "@/lib/character-system";
 
 // Helper functions for character selection
 function getSelectedCharacter(): string {
@@ -25,7 +26,43 @@ function setSelectedCharacter(characterId: string): void {
     localStorage.setItem("agent-town:selected-character", characterId);
   }
 }
-import { Gamepad2, Edit3, Keyboard, Settings, History, Users, Wifi, WifiOff, UserCircle } from "lucide-react";
+
+// Helper to load character with XP from localStorage
+function loadCharacterWithProgress(id: string): EnhancedCharacter | undefined {
+  const character = getCharacterById(id);
+  if (!character) return undefined;
+
+  // Load saved XP from localStorage
+  if (typeof window !== "undefined") {
+    const savedXp = localStorage.getItem(`agent-town:character-xp:${id}`);
+    if (savedXp) {
+      const xp = parseInt(savedXp, 10);
+      let currentXp = xp;
+      let level = 1;
+      let xpToNext = 100;
+
+      while (currentXp >= xpToNext) {
+        currentXp -= xpToNext;
+        level++;
+        xpToNext = Math.floor(100 * Math.pow(1.5, level - 1));
+      }
+
+      return {
+        ...character,
+        level: {
+          current: level,
+          xp: currentXp,
+          xpToNext,
+          totalXp: xp,
+        },
+      };
+    }
+  }
+
+  return character;
+}
+
+import { Gamepad2, Edit3, Keyboard, Settings, History, Users, Wifi, WifiOff, Sparkles } from "lucide-react";
 
 // Dynamically import PhaserGame to avoid SSR issues
 const PhaserGame = dynamic(() => import("@/components/game/PhaserGame"), {
@@ -59,20 +96,28 @@ function AppContent() {
   const [showAgentPanel, setShowAgentPanel] = useState(false);
   const [showCharacterSelect, setShowCharacterSelect] = useState(false);
   const [currentCharacter, setCurrentCharacter] = useState<string>("");
+  const [characterData, setCharacterData] = useState<EnhancedCharacter | undefined>();
 
   // Load saved character on mount
   useEffect(() => {
     const saved = getSelectedCharacter();
     setCurrentCharacter(saved);
+    setCharacterData(loadCharacterWithProgress(saved));
   }, []);
-  
+
   // Handle character selection
   const handleCharacterSelect = useCallback((characterId: string) => {
     setSelectedCharacter(characterId);
     setCurrentCharacter(characterId);
-    const character = getCharacterById(characterId);
+    const character = loadCharacterWithProgress(characterId);
+    setCharacterData(character);
+
     if (character) {
-      toastSuccess(`Character selected: ${character.fullName}`, character.personality);
+      const powerLevel = calculatePowerLevel(character.stats);
+      toastSuccess(
+        `Character selected: ${character.fullName}`,
+        `Level ${character.level.current} • Power ${powerLevel} • ${character.rarity.toUpperCase()}`
+      );
     }
   }, []);
 
@@ -84,7 +129,7 @@ function AppContent() {
   const handleToggleTaskHistory = useCallback(() => setShowTaskHistory((prev) => !prev), []);
   const handleToggleAgentPanel = useCallback(() => setShowAgentPanel((prev) => !prev), []);
   const handleToggleCharacterSelect = useCallback(() => setShowCharacterSelect((prev) => !prev), []);
-  
+
   const handleConnect = useCallback(() => {
     if (state.connection === "connected") {
       disconnect();
@@ -92,8 +137,6 @@ function AppContent() {
       connect();
     }
   }, [state.connection, connect, disconnect]);
-
-
 
   // Keyboard shortcuts
   useEffect(() => {
@@ -146,7 +189,6 @@ function AppContent() {
   }, [handleToggleShortcuts, handleEditMode, handlePlayMode, handleToggleSettings, handleConnect, handleToggleAgentPanel, handleToggleTaskHistory, handleToggleCharacterSelect]);
 
   const isConnected = state.connection === "connected";
-  const selectedChar = getCharacterById(currentCharacter);
 
   return (
     <main className="h-screen w-screen overflow-hidden bg-slate-950">
@@ -176,7 +218,8 @@ function AppContent() {
 
       {/* Top Center - Title */}
       <div className="absolute top-4 left-1/2 -translate-x-1/2 z-50">
-        <h1 className="text-xl font-bold text-yellow-500 text-center" style={{ fontFamily: '"Ark Pixel", monospace' }}>
+        <h1 className="text-xl font-bold text-yellow-500 text-center flex items-center gap-2" style={{ fontFamily: '"Ark Pixel", monospace' }}>
+          <Sparkles className="w-5 h-5" />
           Agent Town
         </h1>
         <p className="text-xs text-slate-400 text-center">
@@ -186,7 +229,7 @@ function AppContent() {
 
       {/* Top Right - Action Buttons */}
       <div className="absolute top-4 right-4 z-50 flex items-center gap-2">
-        {/* Character Select Button */}
+        {/* Character Select Button - Enhanced */}
         <button
           onClick={handleToggleCharacterSelect}
           className={`flex items-center gap-2 px-3 py-2 rounded-lg transition-colors ${
@@ -194,15 +237,32 @@ function AppContent() {
               ? "bg-purple-500 text-white"
               : "bg-slate-800/80 backdrop-blur border border-slate-700 text-slate-400 hover:text-white"
           }`}
-          title="Select Character (3)"
+          title="Character Showcase (3)"
         >
-          <UserCircle size={16} />
-          {selectedChar && (
-            <span 
-              className="text-xs font-medium"
-              style={{ color: selectedChar.color }}
+          {characterData && (
+            <div
+              className="w-6 h-6 rounded-full flex items-center justify-center text-sm"
+              style={{ backgroundColor: `${characterData.color}30` }}
             >
-              {selectedChar.name}
+              {characterData.id === "stan" && "🧢"}
+              {characterData.id === "kyle" && "🟢"}
+              {characterData.id === "cartman" && "🔴"}
+              {characterData.id === "kenny" && "🧥"}
+              {characterData.id === "butters" && "😊"}
+              {characterData.id === "randy" && "🔬"}
+              {characterData.id === "chef" && "👨‍🍳"}
+              {characterData.id === "garrison" && "📚"}
+            </div>
+          )}
+          <span
+            className="text-xs font-medium"
+            style={{ color: characterData?.color }}
+          >
+            {characterData?.name || "Select"}
+          </span>
+          {characterData && (
+            <span className="text-[10px] px-1 py-0.5 bg-slate-700 rounded text-slate-400">
+              Lv.{characterData.level.current}
             </span>
           )}
         </button>
@@ -317,28 +377,24 @@ function AppContent() {
       <KeyboardShortcutsOverlay isOpen={showShortcuts} onClose={() => setShowShortcuts(false)} />
       <SettingsPanel isOpen={showSettings} onClose={() => setShowSettings(false)} />
       <TaskHistory isOpen={showTaskHistory} onClose={() => setShowTaskHistory(false)} />
-      <CharacterSelectPanel
+
+      {/* Character Showcase Panel */}
+      <CharacterShowcasePanel
         isOpen={showCharacterSelect}
         onClose={() => setShowCharacterSelect(false)}
         selectedCharacterId={currentCharacter}
         onSelect={handleCharacterSelect}
       />
+
       <OnboardingTutorial />
 
-      {/* Bottom Left - Watermark & Character */}
-      <div className="absolute bottom-2 left-2 z-50 pointer-events-none flex items-center gap-4">
-        <p className="text-xs text-slate-600 font-mono">
-          Agent Town + Pixel Agents | Powered by OpenClaw
-        </p>
-        {selectedChar && (
-          <span 
-            className="text-xs font-mono px-2 py-1 rounded"
-            style={{ backgroundColor: `${selectedChar.color}20`, color: selectedChar.color }}
-          >
-            🎭 {selectedChar.fullName}
-          </span>
-        )}
-      </div>
+      {/* Bottom Left - Character Floating Widget */}
+      {characterData && (
+        <CharacterFloatingWidget
+          characterId={currentCharacter}
+          onOpenPanel={handleToggleCharacterSelect}
+        />
+      )}
 
       {/* Bottom Right - Mode Indicator */}
       <div className="absolute bottom-2 right-2 z-50">
