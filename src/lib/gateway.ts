@@ -407,9 +407,6 @@ export class GatewayClient {
           instanceId: `aw-${Date.now()}`,
         },
         ...(authToken ? { auth: { token: authToken } } : {}),
-        role: "operator",
-        scopes: ["operator.read", "operator.write"],
-        locale: "en-US",
       },
     };
 
