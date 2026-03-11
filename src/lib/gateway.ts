@@ -399,11 +399,11 @@ export class GatewayClient {
         minProtocol: 3,
         maxProtocol: 3,
         client: {
-          id: "openclaw-studio",
+          id: "webchat-ui",
           displayName: "NiagaBot Control Center",
           version: "1.0.0",
           platform: "web",
-          mode: "backend",
+          mode: "webchat",
           instanceId: `aw-${Date.now()}`,
         },
         ...(authToken ? { auth: { token: authToken } } : {}),
